@@ -1,0 +1,6 @@
+/*.lock
+/*.old
+/build
+/cmake-build-minsizerel-esp32
+/cmake-build-debug-esp32
+/.idea
