@@ -7,6 +7,9 @@
 #include <driver/gpio.h>
 
 typedef struct {
+    int baud;
+    gpio_num_t txd_pin;
+    gpio_num_t rxd_pin;
     unsigned long command_id_cnt;
     unsigned long command_id_sent;
     unsigned long command_id_confirmed;
@@ -17,10 +20,11 @@ typedef struct {
     bool ping_sent;
 } uart_state_t;
 
-void uart_init();
+esp_err_t uart_init();
 unsigned long uart_send(const char *command);
 
-[[noreturn]] void uart_task(void *args);
+[[noreturn]] void uart_receive_task(void *args);
+[[noreturn]] void uart_send_task(void *args);
 [[noreturn]] void uart_task_ping(void *args);
 
 

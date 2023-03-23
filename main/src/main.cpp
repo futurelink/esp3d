@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include <esp_event.h>
 #include <nvs_flash.h>
 #include <driver/gpio.h>
@@ -16,11 +14,16 @@ extern "C" {
 
 #define RED_LED_GPIO_NUM  GPIO_NUM_33
 
+extern uart_state_t uart_state;
 printer_state_t printer_state;
 
 void app_main(void) {
 
     ESP_ERROR_CHECK(esp_event_loop_create_default());
+
+    uart_state.baud = 250000;
+    uart_state.rxd_pin = GPIO_NUM_16;
+    uart_state.txd_pin = GPIO_NUM_13;
 
     printer_state.status = PRINTER_UNKNOWN;
     printer_state.temp_bed = 0;
@@ -30,19 +33,11 @@ void app_main(void) {
     //Initialize NVS
     esp_err_t ret = nvs_flash_init();
     if ((ret == ESP_ERR_NVS_NO_FREE_PAGES) || (ret == ESP_ERR_NVS_NEW_VERSION_FOUND)) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
+        ret = nvs_flash_erase();
+        if (ret == ESP_OK) ret = nvs_flash_init();
     }
-    ESP_ERROR_CHECK(ret);
+    if (ret != ESP_OK) return;
 
-    gpio_config_t io_conf = {
-            .pin_bit_mask = (uint64_t) (1 << GPIO_NUM_12 | 1 << GPIO_NUM_13),
-            .mode = GPIO_MODE_INPUT,
-            .pull_up_en = GPIO_PULLUP_DISABLE,
-            .pull_down_en = GPIO_PULLDOWN_DISABLE,
-            .intr_type = GPIO_INTR_DISABLE
-    };
-    gpio_config(&io_conf);
     gpio_set_level(RED_LED_GPIO_NUM, false);
 
     sdcard_init();

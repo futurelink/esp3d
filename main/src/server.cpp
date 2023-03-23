@@ -22,9 +22,9 @@ extern uart_state_t     uart_state;
 #define COMMAND_MAX_LENGTH          64
 
 typedef struct request_t {
-    httpd_req_t *req;
-    char        *upload_buffer;
-    FILE        *upload_file;
+    httpd_req_t     *req;
+    char            *upload_buffer;
+    FILE            *upload_file;
 } request_t;
 
 request_t   request;
@@ -149,11 +149,10 @@ esp_err_t get_printer_handler(httpd_req_t *req) {
             unsigned long cmd_id = uart_send(cmd);
             free(cmd);
 
-            // Send works in main http server task, this is a temporary solution. Ideally
-            // it should create a separate task to send it and monitor a response. Otherwise,
-            // printer status won't be available when it takes too long to execute a command.
-            while (uart_state.command_id_confirmed < cmd_id) vTaskDelay(100); // Wait until command is confirmed
-            httpd_resp_send(req, R"({"result":"ok"})", HTTPD_RESP_USE_STRLEN);
+            char *result = (char *)malloc(32);
+            sprintf(result, R"({"result":"ok","cmd":"%lu"})", cmd_id);
+            httpd_resp_send(req, result, HTTPD_RESP_USE_STRLEN);
+            free(result);
         } else {
             httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, R"({"error":"Can't send command"})");
         }
@@ -246,13 +245,20 @@ httpd_handle_t start_webserver() {
     config.uri_match_fn = httpd_uri_match_wildcard;
     config.task_priority = 10;
 
-    httpd_uri_t uri_get_main = { .uri = "/", .method = HTTP_GET, .handler = get_main_handler, .user_ctx = nullptr };
-    httpd_uri_t uri_get_favicon = { .uri = "/favicon.ico", .method = HTTP_GET, .handler = get_favicon_handler, .user_ctx = nullptr };
-    httpd_uri_t uri_get_printer = { .uri = "/printer/*", .method = HTTP_GET, .handler = get_printer_handler, .user_ctx = nullptr };
-    httpd_uri_t uri_post = { .uri = "/upload", .method = HTTP_POST, .handler = post_handler, .user_ctx = nullptr };
-    httpd_uri_t uri_get_res = { .uri = "/res/*", .method = HTTP_GET, .handler = get_resource_handler, .user_ctx = nullptr };
-    httpd_uri_t uri_get_files = { .uri = "/files/*", .method = HTTP_GET, .handler = get_files_handler, .user_ctx = nullptr };
-    httpd_uri_t uri_options = { .uri = "/*", .method = HTTP_OPTIONS, .handler = options_handler, .user_ctx = nullptr };
+    httpd_uri_t uri_get_main = { .uri = "/", .method = HTTP_GET, .handler = get_main_handler, .user_ctx = nullptr,
+                                 .is_websocket = false, .handle_ws_control_frames = false };
+    httpd_uri_t uri_get_favicon = { .uri = "/favicon.ico", .method = HTTP_GET, .handler = get_favicon_handler,
+                                    .user_ctx = nullptr, .is_websocket = false, .handle_ws_control_frames = false };
+    httpd_uri_t uri_get_printer = { .uri = "/printer/*", .method = HTTP_GET, .handler = get_printer_handler,
+                                    .user_ctx = nullptr, .is_websocket = false, .handle_ws_control_frames = false };
+    httpd_uri_t uri_post = { .uri = "/upload", .method = HTTP_POST, .handler = post_handler, .user_ctx = nullptr,
+                             .is_websocket = false, .handle_ws_control_frames = false };
+    httpd_uri_t uri_get_res = { .uri = "/res/*", .method = HTTP_GET, .handler = get_resource_handler,
+                                .user_ctx = nullptr, .is_websocket = false, .handle_ws_control_frames = false };
+    httpd_uri_t uri_get_files = { .uri = "/files/*", .method = HTTP_GET, .handler = get_files_handler,
+                                  .user_ctx = nullptr, .is_websocket = false, .handle_ws_control_frames = false };
+    httpd_uri_t uri_options = { .uri = "/*", .method = HTTP_OPTIONS, .handler = options_handler, .user_ctx = nullptr,
+                                .is_websocket = false, .handle_ws_control_frames = false };
 
     if (httpd_start(&server, &config) == ESP_OK) {
         httpd_register_uri_handler(server, &uri_get_favicon);

@@ -20,6 +20,7 @@ $(window).on("load", function () {
     $("#delete_btn").on("click", deleteFile);
 
     updateFilesList();
+    //initStatusWS();
 });
 
 function state() {
@@ -59,6 +60,15 @@ function updateInterfaceAll() {
     storage.updated = false;
 }
 
+function initStatusWS() {
+    storage.websocket = new WebSocket(`ws://${window.location.hostname}/ws`);
+    storage.websocket.onopen = function () { console.log("Websocket opened"); storage.websocket.send('Hello'); };
+    storage.websocket.onclose = function () { console.log("Websocket closed"); setTimeout(initStatusWS, 1000) };
+    storage.websocket.onmessage = getStatusWS;
+}
+function getStatusWS(event) {
+    console.log(event);
+}
 function displayFiles() {
     let f_html = '';
     let has_selected = false;
