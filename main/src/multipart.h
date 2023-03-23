@@ -21,9 +21,10 @@ typedef struct {
 typedef struct {
     char                *boundary;
     size_t              boundary_len;
-    int8_t              (*header_callback)(const char *header, const char *value);
-    int8_t              (*data_callback)(const char *data, size_t len);
-    int8_t              (*data_start_callback)(parser_state_t *parser);
+    void                *callback_context;
+    int8_t              (*header_callback)(const char *header, const char *value, void *context);
+    int8_t              (*data_callback)(const char *data, size_t len, void *context);
+    int8_t              (*data_start_callback)(parser_state_t *parser, void *context);
     parser_state_t      state;
 } parser_config_t;
 

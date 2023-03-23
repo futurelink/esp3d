@@ -16,7 +16,7 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id
     if ((event_base == WIFI_EVENT) && (event_id == WIFI_EVENT_STA_START)) {
         ESP_ERROR_CHECK(esp_wifi_connect());
     } else if ((event_base == WIFI_EVENT) && (event_id == WIFI_EVENT_STA_DISCONNECTED)) {
-        if (wifi_state.retry_num < 999) {
+        if (wifi_state.retry_num < 255) {
             ESP_ERROR_CHECK(esp_wifi_connect());
             wifi_state.retry_num++;
             ESP_LOGI(TAG, "Retry to connect to the AP");
@@ -48,8 +48,8 @@ void wifi_connect() {
 
     esp_event_handler_instance_t instance_any_id;
     esp_event_handler_instance_t instance_got_ip;
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, &instance_any_id));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, &instance_got_ip));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, nullptr, &instance_any_id));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, nullptr, &instance_got_ip));
 
     wifi_config_t wifi_config = {
             .sta = {

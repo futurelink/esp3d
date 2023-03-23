@@ -10,17 +10,17 @@ const storage = {
 $(window).on("load", function () {
     // Initialize timers
     storage.updateInt = setInterval(updateInterfaceAll, 100);
-    storage.updatePrinterInt = setInterval(updatePrinterStatus, 1000);
+    //storage.updatePrinterInt = setInterval(updatePrinterStatus, 1000);
     $(document).on("change", "#upload_field", uploadFileStart);
 
     $("#loading").hide();
     $("#send_cmd_btn").on("click", sendCommand);
     $("#upload_btn").on("click", function() { $("#upload_field").click(); });
-    $("#print_btn").on("click", function() { alert("Not implemented yet"); });
+    $("#print_btn").on("click", print);
     $("#delete_btn").on("click", deleteFile);
 
     updateFilesList();
-    //initStatusWS();
+    initStatusWS();
 });
 
 function state() {
@@ -67,7 +67,15 @@ function initStatusWS() {
     storage.websocket.onmessage = getStatusWS;
 }
 function getStatusWS(event) {
-    console.log(event);
+    let status = JSON.parse(event.data);
+    setState({printer: status});
+}
+function print() {
+    $.ajax({ url: "/printer/start", success: function(res) {
+            setState({printer: res});
+        }, error: function(req, status, err) {
+            showError(req, status, err);
+        }});
 }
 function displayFiles() {
     let f_html = '';

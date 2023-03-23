@@ -12,7 +12,7 @@ typedef struct {
 
 sdcard_t sdcard_state;
 
-static const char TAG[] = "stm32-print-sdcard";
+static const char TAG[] = "esp3d-print-sdcard";
 
 /**
  * Initialize SD card
@@ -38,14 +38,14 @@ bool sdcard_has_file(const char *name) {
     return (stat(path, &st) == 0);
 }
 
-FILE *sdcard_open_file(const char *name) {
+FILE *sdcard_open_file(const char *name, const char *mode) {
     if (sdcard_mount(&sdcard_state.card) != ESP_OK) {
         ESP_LOGE(TAG, "SD card not mounted");
         return nullptr;
     }
     char path[255];
     sprintf(path, "%s/%s", MOUNT_POINT, name);
-    return fopen(path, "wb");
+    return fopen(path, mode);
 }
 
 esp_err_t sdcard_delete_file(const char *name) {
@@ -62,33 +62,36 @@ esp_err_t sdcard_delete_file(const char *name) {
     return ESP_OK;
 }
 
-bool sdcard_get_files(void (*send_proc)(const char *file_entry_chunk), void (*err_send_proc)(const char *error), const char *selected) {
+bool sdcard_get_files(
+        void (*send_proc)(const char *file_entry_chunk, void *),
+        void (*err_send_proc)(const char *error, void *),
+        const char *selected, void *ctx) {
     if (sdcard_mount(&sdcard_state.card) != ESP_OK) {
         ESP_LOGE(TAG, "SD card not mounted");
-        err_send_proc(R"({ "error": "Can't get access to SD card" })");
+        err_send_proc(R"({ "error": "Can't get access to SD card" })", ctx);
         return false;
     }
 
     DIR *dir = opendir(MOUNT_POINT);
     if (!dir) {
         sdcard_umount();
-        err_send_proc(R"({ "error": "Can't open SD card file system" })");
+        err_send_proc(R"({ "error": "Can't open SD card file system" })", ctx);
         return false;
     } else {
-        send_proc("[");
+        send_proc("[", ctx);
         dirent *entry;
         bool first = true;
         while ((entry = readdir(dir)) != nullptr) {
             if (entry->d_type != DT_DIR) {
-                if (first) first = false; else send_proc(",");
-                send_proc(R"({"name":")");
-                send_proc(entry->d_name);
-                send_proc(R"(","date":"2020-01-02")");
-                if ((selected != nullptr) && (strcmp(entry->d_name, selected) == 0)) send_proc(R"(,"selected":"1")");
-                send_proc(R"(})");
+                if (first) first = false; else send_proc(",", ctx);
+                send_proc(R"({"name":")", ctx);
+                send_proc(entry->d_name, ctx);
+                send_proc(R"(","date":"2020-01-02")", ctx);
+                if ((selected != nullptr) && (strcmp(entry->d_name, selected) == 0)) send_proc(R"(,"selected":"1")", ctx);
+                send_proc(R"(})", ctx);
             }
         }
-        send_proc("]");
+        send_proc("]", ctx);
     }
     return true;
 }

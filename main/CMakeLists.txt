@@ -6,6 +6,7 @@ idf_component_register(SRCS
         "src/uart.cpp"
         "src/utils.cpp"
         "src/multipart.cpp"
+        "src/printer.cpp"
         INCLUDE_DIRS ".")
 
 # ---------------------------------------------------------------

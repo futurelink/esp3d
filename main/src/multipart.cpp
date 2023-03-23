@@ -20,6 +20,7 @@ void multipart_parse_init(parser_config_t *parser, size_t buffer_size) {
     parser->state.content_type = nullptr;
     parser->state.content_disposition = nullptr;
 
+    parser->callback_context = nullptr;
     parser->boundary = nullptr;
     parser->header_callback = nullptr;
     parser->data_callback = nullptr;
@@ -95,7 +96,7 @@ int8_t multipart_parse_chunk(parser_config_t *parser, char *buf, int len) {
                     // Found body string
                     case PARSE_BODY:
                         if (parser->data_callback != nullptr)
-                            if(parser->data_callback(parser->state.buf, l) != 0) return -1;
+                            if(parser->data_callback(parser->state.buf, l, parser->callback_context) != 0) return -1;
                         break;
 
                     case PARSE_HEADERS:
@@ -103,7 +104,8 @@ int8_t multipart_parse_chunk(parser_config_t *parser, char *buf, int len) {
                             // End parse headers, starting body
                             parser->state.state = PARSE_BODY;
                             if (parser->data_start_callback != nullptr) {
-                                if (parser->data_start_callback(&parser->state) != 0) return -1; // Bail out if something went wrong
+                                if (parser->data_start_callback(&parser->state, parser->callback_context) != 0)
+                                    return -1; // Bail out if something went wrong
                             }
                             ESP_LOGI(TAG, "Parsing body\n");
                         } else {
@@ -137,7 +139,7 @@ int8_t multipart_parse_chunk(parser_config_t *parser, char *buf, int len) {
                                 parser->state.content_type = (char *)malloc(h_val_len + 1);
                                 strcpy(parser->state.content_type, parser->state.header_val);
                                 if (parser->header_callback != nullptr) {
-                                    if (parser->header_callback("Content-Type", parser->state.content_type) != 0)
+                                    if (parser->header_callback("Content-Type", parser->state.content_type, parser->callback_context) != 0)
                                         parser->state.content_type = nullptr;
                                 }
 
@@ -145,7 +147,7 @@ int8_t multipart_parse_chunk(parser_config_t *parser, char *buf, int len) {
                                 parser->state.content_disposition = (char *)malloc(h_val_len + 1);
                                 strcpy(parser->state.content_disposition, parser->state.header_val);
                                 if (parser->header_callback != nullptr) {
-                                    if (parser->header_callback("Content-Disposition", parser->state.content_disposition) != 0) {
+                                    if (parser->header_callback("Content-Disposition", parser->state.content_disposition, parser->callback_context) != 0) {
                                         parser->state.content_disposition = nullptr;
                                     }
                                 }
@@ -170,7 +172,7 @@ int8_t multipart_parse_chunk(parser_config_t *parser, char *buf, int len) {
     } else {
         // For data section we just pass all the data to callback
         if (parser->data_callback != nullptr) {
-            if (parser->data_callback(&buf[prev_i], len - prev_i) != 0) return -1;
+            if (parser->data_callback(&buf[prev_i], len - prev_i, parser->callback_context) != 0) return -1;
         }
         parser->state.buf_pos = 0;
     }

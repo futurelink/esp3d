@@ -22,10 +22,10 @@ void sdcard_init();
 esp_err_t sdcard_mount(sdmmc_card_t* card);
 void sdcard_umount();
 bool sdcard_has_file(const char *name);
-bool sdcard_get_files(void (*send_proc)(const char *file_entry_chunk),
-                      void (*err_send_proc)(const char *error),
-                      const char *selected);
-FILE *sdcard_open_file(const char *name);
+bool sdcard_get_files(void (*send_proc)(const char *file_entry_chunk, void *),
+                      void (*err_send_proc)(const char *error, void *),
+                      const char *selected, void *ctx);
+FILE *sdcard_open_file(const char *name, const char *mode);
 esp_err_t sdcard_delete_file(const char *name);
 void sdcard_test();
 
