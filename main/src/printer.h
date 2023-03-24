@@ -18,6 +18,7 @@ enum PrinterStatus { PRINTER_UNKNOWN, PRINTER_IDLE, PRINTER_WORKING, PRINTER_PRI
 
 typedef struct {
     enum PrinterStatus status;  // Current printer status
+    bool status_requested;
     float temp_hot_end;         // Hot end temperature
     float temp_bed;             // Heat bed temperature
     FILE *opened_file;          // Descriptor of G-code file

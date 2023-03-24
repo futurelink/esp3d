@@ -187,7 +187,7 @@ esp_err_t Server::get_printer_handler(httpd_req_t *req) {
                 httpd_resp_send(req, R"({"error":"File does not exist!"})", HTTPD_RESP_USE_STRLEN);
                 return ESP_OK;
             }
-            printer.set_opened_file(f);
+            printer.start(f);
             httpd_resp_send(req, R"({"result":"ok"})", HTTPD_RESP_USE_STRLEN);
         } else {
             httpd_resp_send(req, R"({"error":"File is not selected!"})", HTTPD_RESP_USE_STRLEN);

@@ -36,6 +36,7 @@ void Printer::parse_report(const char *report) {
             // Temperature report may be after 'ok', so we need to get it here
             if (strncmp(&report[3], "T:", 2) == 0) parse_temperature_report(&report[3]);
         }
+        if (state.status == PRINTER_UNKNOWN) state.status = PRINTER_IDLE;
     }
     else if (strncmp(report, "echo:busy: ", 11) == 0) {
         if (state.status != PRINTER_PRINTING) state.status = PRINTER_WORKING;
@@ -44,6 +45,7 @@ void Printer::parse_report(const char *report) {
     }
     else if (strncmp(report, "T:", 2) == 0) {
         parse_temperature_report(report);
+        state.status_requested = false; // This was the answer on status request, so we reset the flag
     }
     else if (strncmp(&report[1], "T:", 2) == 0) {
         parse_temperature_report(&report[1]);
@@ -63,11 +65,13 @@ void Printer::parse_report(const char *report) {
 [[noreturn]] void Printer::task_status_report([[gnu::unused]] void *args) {
     auto p = (Printer *) args;
     while (true) {
-        // Blocks until ping request is added
-        while (p->get_uart()->send(COMMAND_PING) == 0) {
-            vTaskDelay(10 / portTICK_PERIOD_MS);
+        if (!p->state.status_requested && (p->state.status != PRINTER_WORKING)) {
+            // Blocks until ping request is added
+            while (p->get_uart()->send(COMMAND_PING) == 0) {
+                vTaskDelay(10 / portTICK_PERIOD_MS);
+            }
+            p->state.status_requested = true;
         }
-        p->set_status(PRINTER_IDLE);
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);  // Wait 1 sec
     }
