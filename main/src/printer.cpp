@@ -1,6 +1,7 @@
 #include <cstring>
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
+#include <cmath>
 
 #include "server.h"
 #include "printer.h"
@@ -142,6 +143,11 @@ float Printer::get_temp_hot_end() const { return state.temp_hot_end; }
 PrinterStatus Printer::get_status() const { return state.status; }
 void Printer::set_status(PrinterStatus st) { state.status = st; }
 FILE *Printer::get_opened_file() const { return state.print_file; }
+float Printer::get_progress() const {
+    if ((get_opened_file() != nullptr) && (state.print_file_bytes != 0)) {
+        return roundf(((float)state.print_file_bytes_sent / (float)state.print_file_bytes) * 100) / 100;
+    } else return 0;
+}
 
 /**
  * Callbacks

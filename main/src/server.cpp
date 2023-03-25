@@ -285,9 +285,9 @@ esp_err_t Server::get_resource_handler(httpd_req_t *req) {
 }
 
 esp_err_t Server::send_status_ws() const {
-    char str[64];
-    sprintf(str, R"({"status":"%s","hot_end":"%.2f","bed":"%.2f"})", printer_state_str(),
-            printer.get_temp_hot_end(), printer.get_temp_bed());
+    char str[128];
+    sprintf(str, R"({"status":"%s","hot_end":"%.2f","bed":"%.2f","progress":%f})", printer_state_str(),
+            printer.get_temp_hot_end(), printer.get_temp_bed(), printer.get_progress());
     send_ws(str);
 
     return ESP_OK;

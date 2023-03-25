@@ -46,7 +46,6 @@ function updateInterfaceAll() {
         else $("#progress").html("Uploading: <br/>" + state().upload_progress + '%');
     } else $("#blinder").css("display", "none");
 
-    $("#delete_btn").prop('disabled', !state().has_selected);
     if ((state().printer.status === 'Unknown') || (state().printer.status === 'Printing')) {
         $('#send_cmd_btn').prop('disabled', true);
         $('#send_cmd').prop('disabled', true);
@@ -56,6 +55,7 @@ function updateInterfaceAll() {
         $('#send_cmd').prop('disabled', false);
         $("#print_btn").prop('disabled', !state().has_selected);
     }
+    $("#delete_btn").prop('disabled', (!state().has_selected) || (state().printer.status === 'Printing'));
 
     storage.updated = false;
 }

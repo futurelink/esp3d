@@ -63,6 +63,7 @@ public:
     [[nodiscard]] PrinterStatus get_status() const;
     [[nodiscard]] float get_temp_hot_end() const;
     [[nodiscard]] float get_temp_bed() const;
+    [[nodiscard]] float get_progress() const;
 
 private:
     [[noreturn]] static void task_status_report(void *arg);
