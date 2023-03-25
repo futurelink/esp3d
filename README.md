@@ -2,7 +2,7 @@ ESP3D printer server
 ---
 
 <p>
-<img src="./screenshot-1.jpg" height="500" align="left" style="margin: 16px;">
+<img src="./screenshot-1.jpg" height="400" align="left" style="margin: 16px;">
 </p>
 
 ### What is this?
