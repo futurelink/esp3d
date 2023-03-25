@@ -18,8 +18,10 @@
   along with esp3D-print. If not, see <https://opensource.org/license/mit/>.
 */
 
+#include <ctime>
 #include "uart.h"
 #include "server.h"
+
 
 //#define DEBUG
 
@@ -35,6 +37,9 @@ SerialPort::SerialPort(int baud, gpio_num_t rxd_pin, gpio_num_t txd_pin, void (*
     this->str_pos = 0;
     this->task_send = nullptr;
     this->task_receive = nullptr;
+    this->task_watchdog = nullptr;
+
+    last_sent_time = 0;
 
     // Create command buffer
     command_id_cnt = 0;
@@ -44,10 +49,9 @@ SerialPort::SerialPort(int baud, gpio_num_t rxd_pin, gpio_num_t txd_pin, void (*
     command_buffer_head = 0;
     command_buffer_tail = 0;
     command_buffer_tail_confirmed = 0;
-    printer_buffer_size = 3;
 
+    printer_buffer_size = 3;
     printer_response_parse_callback = (void (*)(const char *)) callback;
-    //spinlock_initialize(&uart_mux);
 }
 
 /**
@@ -110,15 +114,45 @@ esp_err_t SerialPort::init() {
     // Start UART tasks
     xTaskCreate(SerialPort::send_task, "uart_send_task", UART_TASK_STACK_SIZE, this, UART_TASK_PRIORITY, &task_send);
     xTaskCreate(SerialPort::receive_task, "uart_receive_task", UART_TASK_STACK_SIZE, this, UART_TASK_PRIORITY, &task_receive);
+    xTaskCreate(SerialPort::watchdog_task, "uart_watchdog_task", UART_TASK_STACK_SIZE, this, UART_TASK_PRIORITY, &task_watchdog);
 
     return ESP_OK;
+}
+
+/**
+ * Watchdog task tracks unconfirmed messages and re-sends them
+ * when a message is not answered in given period of time.
+ * @param args
+ */
+void SerialPort::watchdog_task(void *args) {
+    auto serialPort = (SerialPort *)args;
+    while (true) {
+        if (serialPort->is_locked()) continue;
+        if (serialPort->command_buffer_tail == serialPort->command_buffer_tail_confirmed) continue;
+        if (serialPort->last_sent_time > 0) {
+            unsigned int millis = clock() * 1000 / CLOCKS_PER_SEC;
+            if ((millis - serialPort->last_sent_time) > 5000) {
+                ESP_LOGE(TAG, "Unconfirmed message watchdog triggered (%d / %d), re-sending", millis, serialPort->last_sent_time);
+                // Roll back command buffer to re-send message
+                vPortEnterCritical(&serialPort->uart_mux);
+                auto id = serialPort->command_id_sent;
+                serialPort->command_id_sent = id - 1;
+                int tail = serialPort->command_buffer_tail;
+                if (tail > 0) tail--; else tail = COMMAND_BUFFER_SIZE - 1;
+                serialPort->command_buffer_tail = tail;
+                vPortExitCritical(&serialPort->uart_mux);
+            }
+        }
+        vTaskDelay(1000 / portTICK_PERIOD_MS); // 1sec delay
+        //vPortYield();
+    }
 }
 
 /**
  * Task function. Main printer communication cycle.
  * @param args
  */
-void SerialPort::receive_task([[gnu::unused]] void *args) {
+void SerialPort::receive_task(void *args) {
     auto serialPort = (SerialPort *)args;
     serialPort->str_pos = 0;
     while (true) {
@@ -146,6 +180,7 @@ void SerialPort::receive() {
         ESP_LOGI(TAG, "uart_receive start");
 #endif
         uint16_t cnt = 0;
+
         do {
             if (uart_rx_buffer[cnt] == '\n') {
                 str[str_pos] = 0;
@@ -178,11 +213,7 @@ bool SerialPort::transmit_from_buffer() {
     }*/
 
     uint8_t tail = command_buffer_tail;
-    if (tail == command_buffer_head) {
-        vTaskPrioritySet(task_send, tskIDLE_PRIORITY); // Nothing is in buffer so lower the priority
-        return false;            // Empty buffer
-    }
-
+    if (tail == command_buffer_head) return false;            // Empty buffer
     if (tail != command_buffer_tail_confirmed) {
 #ifdef DEBUG
         ESP_LOGI(TAG, "There's unconfirmed message %d / %d", tail, command_buffer_tail_confirmed);
@@ -198,6 +229,7 @@ bool SerialPort::transmit_from_buffer() {
 
     uart_write_bytes(UART, command_buffer[tail], strlen(command_buffer[tail]));
     if (++tail == COMMAND_BUFFER_SIZE) tail = 0;        // Increment transmit pointer
+    last_sent_time = clock() * 1000 / CLOCKS_PER_SEC;
     command_buffer_tail = tail;
     auto id = command_id_sent; command_id_sent = id + 1; // Increment sent command ID
 
@@ -223,6 +255,7 @@ void SerialPort::transmit_confirm() {
 
     // Increment confirmed command ID
     auto id = command_id_confirmed; command_id_confirmed = id + 1;
+    last_sent_time = 0;
 
 #ifdef DEBUG
 //    ESP_LOGI(TAG, "uart_transmit_confirm done tail=%d / tail_conf=%d", command_buffer_tail, command_buffer_tail_confirmed);

@@ -1,27 +1,29 @@
 ESP3D printer server
 ---
 
-### What is this?
+<p>
+<img src="./screenshot-1.jpg" height="500" align="left" style="margin: 16px;">
+</p>
 
+### What is this?
 This is a tiny 3D printer server with web-interface inside. It was designed
 especially for 3D printers that has no on-board Wi-Fi or any other networking module.
 This firmware by-design can run on ESP32-Cam cheap module which has SD-card interface
 and enough free pins just to connect it to the printer with UART.
 
-### What it can do?
 
+
+### What it can do?
 It can act as a file server, so you can upload sliced G-Code onto SD-card, then
-select a file to print and track printing progress in cute web-UI. Unfortunately
-it does not show progress on mobile phones, but I'm working on that.
+select a file to print and track printing progress in cute web-UI. ~~Unfortunately
+it does not show progress on mobile phones, but I'm working on that.~~
 
 ### Compatibility
-
 Current version was tested with Marlin 2.x on Lerdge X board (this board has
 UART in its peripheral connector). No other boards/firmwares were confirmed working.
 Please feel free to report if you made it work with your printer.
 
 ### How to install it?
-
 First you need a ESP32-CAM module which should be connected to your 3D-printer UART
 like in the picture below:
 
@@ -42,6 +44,8 @@ These are mandatory. If you want to add an IP address for your printer you may u
 `ip=192.168.xxx.xxx`
 
 That's it. Put the SD-card into your module and give it some power.
+
+<img src="./screenshot-2.jpg" align="right" style="margin: 10px;">
 
 ---
 

@@ -39,6 +39,7 @@ Printer::Printer() {
     state = {
             .status = PRINTER_UNKNOWN,
             .status_requested = false,
+            .status_updated = false,
             .temp_hot_end = 0,
             .temp_bed = 0,
             .printing_stop = false,
@@ -65,8 +66,8 @@ void Printer::parse_report(const char *report) {
     // ok - confirmed message from printer. Each sent command MUST be answered with
     // 'ok'. Even if it was unknown command, Marlin answers 'ok' with preceding 'echo'.
     if ((report[0] == 'o') && (report[1] == 'k')) {
-        uart->lock(false);
         uart->transmit_confirm();
+        uart->lock(false);
 #ifdef DEBUG
 //        ESP_LOGI(TAG, "Confirmed #%lu", uart->get_command_id_confirmed());
 #endif

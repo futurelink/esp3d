@@ -47,7 +47,7 @@ function updateInterfaceAll() {
     } else $("#blinder").css("display", "none");
 
     if (state().printer.status === 'Printing') {
-        $('#print_progress_bar').css('width', state().printer.progress + '%');
+        $('#print_progress_bar').css('width', (state().printer.progress * 100) + '%');
         $('#print_progress').css('display', '');
     } else $('#print_progress').css('display', 'none');
 

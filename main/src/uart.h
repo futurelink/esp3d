@@ -50,8 +50,11 @@ private:
     volatile uint8_t command_buffer_tail_confirmed;
     bool locked;
 
+    unsigned int last_sent_time;
+
     TaskHandle_t task_send;
     TaskHandle_t task_receive;
+    TaskHandle_t task_watchdog;
 
     uint8_t printer_buffer_size;
     void (*printer_response_parse_callback)(const char *resp);
@@ -70,6 +73,7 @@ public:
 
     [[noreturn]] static void receive_task(void *args);
     [[noreturn]] static void send_task(void *args);
+    [[noreturn]] static void watchdog_task(void *args);
 
     void receive();
 
