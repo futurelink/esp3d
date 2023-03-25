@@ -32,10 +32,9 @@ You also need to prepare (not necessarily) blank SD-card. There you got to
 create a directory called 'esp3d' and put there a file called 'settings' which
 should contain your Wi-Fi credentials:
 
-`
-ssid=your_favorite_ap_ssid
-password=your_supa_dupa_strong_password
-`
+`ssid=your_favorite_ap_ssid`
+
+`password=your_supa_dupa_strong_password`
 
 These are mandatory. If you want to add an IP address for your printer you may use:
 
