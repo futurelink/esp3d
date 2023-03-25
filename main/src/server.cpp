@@ -184,17 +184,19 @@ esp_err_t Server::get_printer_handler(httpd_req_t *req) {
         if (ctx->selected_file != nullptr) {
             FILE *f = sdcard_open_file(ctx->selected_file, "r");
             if (f == nullptr) {
-                httpd_resp_send(req, R"({"error":"File does not exist!"})", HTTPD_RESP_USE_STRLEN);
+                httpd_resp_send(req, R"({"error":"File does not exist"})", HTTPD_RESP_USE_STRLEN);
                 return ESP_OK;
             }
-            printer.start(f);
+            if (printer.start(f) != ESP_OK) {
+                httpd_resp_send(req, R"({"error":"Can't start print job"})", HTTPD_RESP_USE_STRLEN);
+                return ESP_OK;
+            }
             httpd_resp_send(req, R"({"result":"ok"})", HTTPD_RESP_USE_STRLEN);
         } else {
             httpd_resp_send(req, R"({"error":"File is not selected!"})", HTTPD_RESP_USE_STRLEN);
         }
     } else if (strcmp(req->uri, "/printer/stop") == 0) {
-        if (printer.get_status() == PRINTER_PRINTING) {
-            printer.stop();
+        if ((printer.get_status() == PRINTER_PRINTING) && (printer.stop() == ESP_OK)) {
             httpd_resp_send(req, R"({"result":"ok"})", HTTPD_RESP_USE_STRLEN);
         } else {
             httpd_resp_send(req, R"({"error":"Printer is not printing. Nothing to stop."})", HTTPD_RESP_USE_STRLEN);

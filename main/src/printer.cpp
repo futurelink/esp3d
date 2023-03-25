@@ -90,12 +90,13 @@ void Printer::task_print(void *arg) {
             while (fgets(line, 80, f) != nullptr) {
                 if (p->state.printing_stop) {
                     p->state.printing_stop = false;
-                    p->state.opened_file = nullptr;
+                    p->state.print_file = nullptr;
                     break;
                 }
 #ifdef DEBUG
                 ESP_LOGI(TAG, "Got line: %s", line);
 #endif
+                p->state.print_file_bytes_sent += strlen(line); // To track progress
                 if ((line[0] != 'G') && (line[0] != 'M')) continue; // Send only M and G codes
                 while (!p->send_cmd(line)) {
                     // If we haven't managed to send because buffer was full,
@@ -118,8 +119,21 @@ void Printer::init() {
     xTaskCreate(Printer::task_print, "printer_task_print", PRINTER_TASK_STACK_SIZE, this, tskIDLE_PRIORITY, nullptr);
 }
 
-void Printer::start(FILE *f) { state.opened_file = f; }
-void Printer::stop() { state.printing_stop = true; }
+esp_err_t Printer::start(FILE *f) {
+    if (state.print_file != nullptr) return ESP_FAIL;
+    state.print_file_bytes = f->_bf._size;
+    state.print_file_bytes_sent = 0;
+    state.print_file = f;
+    return ESP_OK;
+}
+
+esp_err_t Printer::stop() {
+    if (state.print_file == nullptr) return ESP_FAIL;
+    state.printing_stop = true;
+    state.print_file_bytes = 0;
+    state.print_file_bytes_sent = 0;
+    return ESP_OK;
+}
 
 unsigned long int Printer::send_cmd(const char *cmd) { return uart->send(cmd); }
 SerialPort *Printer::get_uart() { return uart; }
@@ -127,7 +141,7 @@ float Printer::get_temp_bed() const { return state.temp_bed; }
 float Printer::get_temp_hot_end() const { return state.temp_hot_end; }
 PrinterStatus Printer::get_status() const { return state.status; }
 void Printer::set_status(PrinterStatus st) { state.status = st; }
-FILE *Printer::get_opened_file() const { return state.opened_file; }
+FILE *Printer::get_opened_file() const { return state.print_file; }
 
 /**
  * Callbacks

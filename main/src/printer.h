@@ -21,8 +21,11 @@ typedef struct {
     bool status_requested;
     float temp_hot_end;         // Hot end temperature
     float temp_bed;             // Heat bed temperature
-    FILE *opened_file;          // Descriptor of G-code file
+
     bool printing_stop;         // Flags printer to stop its job
+    FILE *print_file;           // Descriptor of G-code file
+    unsigned long int print_file_bytes;
+    unsigned long int print_file_bytes_sent;
 } printer_state_t;
 
 class Printer {
@@ -36,16 +39,18 @@ public:
                 .status = PRINTER_UNKNOWN,
                 .temp_hot_end = 0,
                 .temp_bed = 0,
-                .opened_file = nullptr,
-                .printing_stop = false
+                .printing_stop = false,
+                .print_file = nullptr,
+                .print_file_bytes = 0,
+                .print_file_bytes_sent = 0;
         };
 
         uart = new SerialPort(250000, GPIO_NUM_16, GPIO_NUM_13, parse_report_callback);
     }
 
     void init();
-    void start(FILE *f);
-    void stop();
+    esp_err_t start(FILE *f);
+    esp_err_t stop();
 
     void set_status(PrinterStatus st);
     [[nodiscard]] FILE *get_opened_file() const;

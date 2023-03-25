@@ -47,7 +47,7 @@ function updateInterfaceAll() {
     } else $("#blinder").css("display", "none");
 
     $("#delete_btn").prop('disabled', !state().has_selected);
-    if (state().printer.status === 'Unknown') {
+    if ((state().printer.status === 'Unknown') || (state().printer.status === 'Printing')) {
         $('#send_cmd_btn').prop('disabled', true);
         $('#send_cmd').prop('disabled', true);
         $('#print_btn').prop('disabled', true);
