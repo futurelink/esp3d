@@ -1,5 +1,5 @@
 /*
-  utils.h - utility functions
+  camera.h - camera specific routines
   Part of esp3D-print
 
   Copyright (c) 2023 Denis Pavlov
@@ -18,9 +18,7 @@
   along with esp3D-print. If not, see <https://opensource.org/license/mit/>.
 */
 
-#ifndef ESP32_PRINT_UTILS_H
-#define ESP32_PRINT_UTILS_H
+#ifndef ESP32_PRINT_CAMERA_H
+#define ESP32_PRINT_CAMERA_H
 
-void url_decode(char *decoded_url, const char *url);
-
-#endif // ESP32_PRINT_UTILS_H
+#endif //ESP32_PRINT_CAMERA_H

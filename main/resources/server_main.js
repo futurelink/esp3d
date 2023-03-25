@@ -46,6 +46,11 @@ function updateInterfaceAll() {
         else $("#progress").html("Uploading: <br/>" + state().upload_progress + '%');
     } else $("#blinder").css("display", "none");
 
+    if (state().printer.status === 'Printing') {
+        $('#print_progress_bar').css('width', state().printer.progress + '%');
+        $('#print_progress').css('display', '');
+    } else $('#print_progress').css('display', 'none');
+
     if ((state().printer.status === 'Unknown') || (state().printer.status === 'Printing')) {
         $('#send_cmd_btn').prop('disabled', true);
         $('#send_cmd').prop('disabled', true);

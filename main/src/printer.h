@@ -1,3 +1,23 @@
+/*
+  printer.h - printer specific class
+  Part of esp3D-print
+
+  Copyright (c) 2023 Denis Pavlov
+
+  esp3D-print is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  esp3D-print is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the MIT License
+  along with esp3D-print. If not, see <https://opensource.org/license/mit/>.
+*/
+
 #ifndef ESP32_PRINT_PRINTER_H
 #define ESP32_PRINT_PRINTER_H
 
@@ -19,6 +39,7 @@ enum PrinterStatus { PRINTER_UNKNOWN, PRINTER_IDLE, PRINTER_WORKING, PRINTER_PRI
 typedef struct {
     enum PrinterStatus status;  // Current printer status
     bool status_requested;
+    bool status_updated;
     float temp_hot_end;         // Hot end temperature
     float temp_bed;             // Heat bed temperature
 
@@ -26,6 +47,8 @@ typedef struct {
     FILE *print_file;           // Descriptor of G-code file
     unsigned long int print_file_bytes;
     unsigned long int print_file_bytes_sent;
+
+    char last_report[128];
 } printer_state_t;
 
 class Printer {
@@ -34,19 +57,7 @@ private:
     printer_state_t state;
 
 public:
-    Printer() {
-        state = {
-                .status = PRINTER_UNKNOWN,
-                .temp_hot_end = 0,
-                .temp_bed = 0,
-                .printing_stop = false,
-                .print_file = nullptr,
-                .print_file_bytes = 0,
-                .print_file_bytes_sent = 0
-        };
-
-        uart = new SerialPort(250000, GPIO_NUM_16, GPIO_NUM_13, parse_report_callback);
-    }
+    Printer();
 
     void init();
     esp_err_t start(FILE *f);
@@ -68,6 +79,7 @@ public:
 private:
     [[noreturn]] static void task_status_report(void *arg);
     [[noreturn]] static void task_print(void *arg);
+    [[noreturn]] static void task_state_log(void *arg);
 };
 
 #endif //ESP32_PRINT_PRINTER_H

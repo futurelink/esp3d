@@ -14,4 +14,4 @@ div.err { margin: 8pt; padding: 16pt; border: 1px solid #990000; background: #ff
 div.blinder { position: fixed; background: rgba(100,100,100,0.5); top: 0; left: 0; width: 100%; height: 100%;
     display: none; flex-direction: column; align-items: center; align-content: center; justify-content: center; z-index: 1000; }
 div.blinder div.c { background: #fff; padding: 8px; border: 1px solid #aaa; border-radius: 5pt; }
-div.blinder div.c div.progress { margin-left: 12pt; height: 100%; background: #fff; }
+div.blinder div.c div.prog { margin-left: 12pt; height: 100%; background: #fff; }

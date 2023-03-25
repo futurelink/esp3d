@@ -25,7 +25,7 @@
                 <span class="visually-hidden">Loading...</span>
             </div>
         </div>
-        <div class="progress" id="progress"></div>
+        <div class="prog" id="progress"></div>
     </div></div>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container-fluid">
@@ -39,11 +39,25 @@
     <div class="container mt-2 mt-lg-4">
         <div class="row">
             <div class="container col-lg-4 col-md-5">
-                <div class="st">
-                    <div class="container mx-0 px-0" id="printer_status">
-                        <div class="row container mx-0 px-2 py-2" style="background: #eeeeee; border-radius: 5pt 5pt 0 0;"><div class="col px-0 text-nowrap">Status: </div><div class="col px-0" id="printer_status_status"></div></div>
-                        <div class="row container mx-0 px-2 py-2"><div class="col px-0 text-nowrap">Hot end temperature: </div><div class="col px-0" id="printer_status_hot_end"></div></div>
-                        <div class="row container mx-0 px-2 py-2"><div class="col px-0 text-nowrap">Bed temperature: </div><div class="col px-0" id="printer_status_bed"></div></div>
+                <div class="container col-xs-12 mx-0 px-0">
+                    <div class="st">
+                        <div class="container mx-0 px-0" id="printer_status">
+                            <div class="row container mx-0 px-2 py-2" style="background: #eeeeee; border-radius: 5pt 5pt 0 0;"><div class="col px-0 text-nowrap">Status: </div><div class="col px-0" id="printer_status_status"></div></div>
+                            <div class="row container mx-0 px-2 py-2"><div class="col px-0 text-nowrap">Hot end temperature: </div><div class="col px-0" id="printer_status_hot_end"></div></div>
+                            <div class="row container mx-0 px-2 py-2"><div class="col px-0 text-nowrap">Bed temperature: </div><div class="col px-0" id="printer_status_bed"></div></div>
+                        </div>
+                    </div>
+                    <div class="container mx-0 px-0 my-4" id="print_progress">
+                        <div class="st px-2 py-2">
+                            Print progress:
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped" id="print_progress_bar"
+                                     role="progressbar" style="width: 0"
+                                     aria-valuenow="10" aria-valuemin="0" aria-valuemax="100">
+                                    0%
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

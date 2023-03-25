@@ -1,3 +1,23 @@
+/*
+  uart.cpp - UART specific routines
+  Part of esp3D-print
+
+  Copyright (c) 2023 Denis Pavlov
+
+  esp3D-print is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  esp3D-print is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the MIT License
+  along with esp3D-print. If not, see <https://opensource.org/license/mit/>.
+*/
+
 #include "uart.h"
 #include "server.h"
 
@@ -27,6 +47,7 @@ SerialPort::SerialPort(int baud, gpio_num_t rxd_pin, gpio_num_t txd_pin, void (*
     printer_buffer_size = 3;
 
     printer_response_parse_callback = (void (*)(const char *)) callback;
+    //spinlock_initialize(&uart_mux);
 }
 
 /**
@@ -60,7 +81,10 @@ unsigned long SerialPort::send(const char *command) {
     ESP_LOGI(TAG, "uart_send done: >> %s", ptr);
 #endif
 
-    return ++command_id_cnt;
+    // Increment command ID
+    auto id = command_id_cnt; command_id_cnt = id + 1;
+
+    return command_id_cnt;
 }
 
 esp_err_t SerialPort::init() {
@@ -116,22 +140,23 @@ void SerialPort::send_task(void *args) {
 }
 
 void SerialPort::receive() {
-    char uart_tmp_buffer[UART_TMP_BUF_SIZE];
-    int len = uart_read_bytes(UART, uart_tmp_buffer, (UART_TMP_BUF_SIZE - 1), 1 / portTICK_PERIOD_MS);
+    int len = uart_read_bytes(UART, uart_rx_buffer, (UART_TMP_BUF_SIZE - 1), 0);
     if (len > 0) {
 #ifdef DEBUG
         ESP_LOGI(TAG, "uart_receive start");
 #endif
         uint16_t cnt = 0;
         do {
-            if (uart_tmp_buffer[cnt] == '\n') {
+            if (uart_rx_buffer[cnt] == '\n') {
                 str[str_pos] = 0;
                 str_pos = 0;
 #ifdef DEBUG
                 ESP_LOGI(TAG, "<< %s", str);
 #endif
+                vPortEnterCritical(&uart_mux);
                 printer_response_parse_callback(str);
-            } else if (str_pos < UART_TMP_BUF_SIZE) str[str_pos++] = uart_tmp_buffer[cnt];
+                vPortExitCritical(&uart_mux);
+            } else if (str_pos < UART_TMP_BUF_SIZE) str[str_pos++] = uart_rx_buffer[cnt];
         } while (++cnt < len);
 #ifdef DEBUG
         ESP_LOGI(TAG, "uart_receive done");
@@ -145,12 +170,12 @@ void SerialPort::receive() {
  * It should be incremented a bit later when confirmation comes from printer.
  */
 bool SerialPort::transmit_from_buffer() {
-    if ((command_id_sent - command_id_confirmed) > printer_buffer_size) {
+    /*if ((command_id_sent - command_id_confirmed) > printer_buffer_size) {
 #ifdef DEBUG
         ESP_LOGI(TAG, "Too many unconfirmed messages %lu / %lu", command_id_confirmed, command_id_sent);
 #endif
         return true;
-    }
+    }*/
 
     uint8_t tail = command_buffer_tail;
     if (tail == command_buffer_head) {
@@ -158,27 +183,27 @@ bool SerialPort::transmit_from_buffer() {
         return false;            // Empty buffer
     }
 
-    /*if (tail != command_buffer_tail_confirmed) {
-        //ESP_LOGI(TAG, "There's unconfirmed message %d / %d", tail, command_buffer_tail_confirmed);
+    if (tail != command_buffer_tail_confirmed) {
+#ifdef DEBUG
+        ESP_LOGI(TAG, "There's unconfirmed message %d / %d", tail, command_buffer_tail_confirmed);
+#endif
         return true;   // Don't send anything until we haven't got answer
-    }*/
+    }
 
 #ifdef DEBUG
     ESP_LOGI(TAG, "uart_transmit_from_buffer start ");
+#else
+    vPortEnterCritical(&uart_mux);
 #endif
 
     uart_write_bytes(UART, command_buffer[tail], strlen(command_buffer[tail]));
-    command_id_sent++;
-
-#ifdef DEBUG
-    ESP_LOGI(TAG, ">> #%lu: %s ", command_id_sent, command_buffer[tail]);
-#endif
-
-    // Increment transmit pointer
-    if (++tail == COMMAND_BUFFER_SIZE) tail = 0;
+    if (++tail == COMMAND_BUFFER_SIZE) tail = 0;        // Increment transmit pointer
     command_buffer_tail = tail;
+    auto id = command_id_sent; command_id_sent = id + 1; // Increment sent command ID
 
-#ifdef DEBUG
+#ifndef DEBUG
+    vPortExitCritical(&uart_mux);
+#else
     ESP_LOGI(TAG, "uart_transmit_from_buffer done");
 #endif
     return true;
@@ -189,21 +214,27 @@ bool SerialPort::transmit_from_buffer() {
  */
 void SerialPort::transmit_confirm() {
 #ifdef DEBUG
-    ESP_LOGI(TAG, "uart_transmit_confirm start");
+//    ESP_LOGI(TAG, "uart_transmit_confirm start");
 #endif
     //free(command_buffer[command_buffer_tail_confirmed]);    // Free sent command buffer
     uint8_t next = command_buffer_tail_confirmed + 1;       // Increment confirmed number
     if (next == COMMAND_BUFFER_SIZE) next = 0;
     command_buffer_tail_confirmed = next;
-    command_id_confirmed++;
+
+    // Increment confirmed command ID
+    auto id = command_id_confirmed; command_id_confirmed = id + 1;
 
 #ifdef DEBUG
-    ESP_LOGI(TAG, "uart_transmit_confirm done tail=%d / tail_conf=%d", command_buffer_tail, command_buffer_tail_confirmed);
+//    ESP_LOGI(TAG, "uart_transmit_confirm done tail=%d / tail_conf=%d", command_buffer_tail, command_buffer_tail_confirmed);
 #endif
 }
 
 unsigned long int SerialPort::get_command_id_confirmed() const {
     return command_id_confirmed;
+}
+
+unsigned long int SerialPort::get_command_id_sent() const {
+    return command_id_sent;
 }
 
 bool SerialPort::is_all_confirmed() const {

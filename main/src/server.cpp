@@ -1,7 +1,26 @@
+/*
+  server.cpp - web-server
+  Part of esp3D-print
+
+  Copyright (c) 2023 Denis Pavlov
+
+  esp3D-print is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  esp3D-print is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the MIT License
+  along with esp3D-print. If not, see <https://opensource.org/license/mit/>.
+*/
+
 #include "server.h"
 #include "utils.h"
 #include "sdcard.h"
-#include "state.h"
 #include "multipart.h"
 #include "printer.h"
 
@@ -171,7 +190,7 @@ esp_err_t Server::get_printer_handler(httpd_req_t *req) {
             unsigned long cmd_id = printer.send_cmd(cmd);
             free(cmd);
 
-            char *result = (char *)malloc(32);
+            char *result = (char *)malloc(64);
             sprintf(result, R"({"result":"ok","cmd":"%lu"})", cmd_id);
             httpd_resp_set_type(req, TYPE_APPLICATION_JSON);
             httpd_resp_send(req, result, HTTPD_RESP_USE_STRLEN);
@@ -223,6 +242,10 @@ esp_err_t Server::get_files_handler(httpd_req_t *req) {
             return ESP_OK;
         }
     } else if (strncmp(req->uri, "/files/?delete", 14) == 0) {
+        if (printer.get_status() == PRINTER_PRINTING) {
+            httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, R"({ "error" : "Can't delete file while printing" })");
+            return ESP_OK;
+        }
         if (ctx->selected_file != nullptr) {
             if (sdcard_delete_file(ctx->selected_file) != ESP_OK) {
                 httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, R"({ "error" : "Could not delete file" })");
