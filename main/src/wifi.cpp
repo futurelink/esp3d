@@ -36,7 +36,7 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id
     }
 }
 
-void wifi_connect(const char *ssid, const char *password) {
+void wifi_connect(const char *ssid, const char *password, const char *ip) {
     wifi_state.connected = false;
     wifi_state.event_group = xEventGroupCreate();
 
@@ -55,7 +55,13 @@ void wifi_connect(const char *ssid, const char *password) {
 
     wifi_config_t wifi_config = { .sta = { .threshold = { .authmode = WIFI_AUTH_WPA2_PSK }}};
     strcpy((char*) wifi_config.sta.ssid, ssid);
-    strcpy((char*) wifi_config.sta.password, ssid);
+    strcpy((char*) wifi_config.sta.password, password);
+
+    ESP_LOGI(TAG, "Connecting with SSID: %s, password: %s", ssid, password);
+
+    if (ip != nullptr) {
+        //esp_netif_dhcpc_stop(wifi_config.sta);
+    }
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
     ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));

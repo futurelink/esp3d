@@ -29,7 +29,7 @@ void app_main(void) {
 
     sdcard_init();
     if (settings.load() == ESP_OK) {
-        wifi_connect();
+        wifi_connect(settings.get_ssid(), settings.get_password(), settings.get_ip());
         server.start();
         printer.init();
     }

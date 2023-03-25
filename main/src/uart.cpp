@@ -60,11 +60,6 @@ unsigned long SerialPort::send(const char *command) {
     ESP_LOGI(TAG, "uart_send done: >> %s", ptr);
 #endif
 
-    // When we put something in buffer we need to raise
-    // task priorities to send that ASAP.
-//    vTaskPrioritySet(task_send, 10);
-//    vTaskPrioritySet(task_receive, 10);
-
     return ++command_id_cnt;
 }
 
@@ -221,4 +216,15 @@ void SerialPort::lock(bool lock) {
 
 bool SerialPort::is_locked() const {
     return locked;
+}
+
+/**
+ * Defines how many unconfirmed commands printer can bear. Technically this is its command buffer
+ * size.
+ *
+ * @param size
+ * @return
+ */
+void SerialPort::set_printer_buffer_size(size_t size) {
+    printer_buffer_size = size;
 }

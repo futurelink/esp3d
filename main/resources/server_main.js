@@ -62,8 +62,8 @@ function updateInterfaceAll() {
 
 function initStatusWS() {
     storage.websocket = new WebSocket(`ws://${window.location.hostname}/ws`);
-    storage.websocket.onopen = function () { console.log("Websocket opened"); storage.websocket.send('Hello'); };
-    storage.websocket.onclose = function () { console.log("Websocket closed"); setTimeout(initStatusWS, 1000) };
+    storage.websocket.onopen = function () { console.log("Websocket opened"); };
+    storage.websocket.onclose = function () { console.log("Websocket closed"); setTimeout(initStatusWS, 500) };
     storage.websocket.onmessage = getStatusWS;
 }
 function getStatusWS(event) {

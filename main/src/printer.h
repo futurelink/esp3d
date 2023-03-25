@@ -42,7 +42,7 @@ public:
                 .printing_stop = false,
                 .print_file = nullptr,
                 .print_file_bytes = 0,
-                .print_file_bytes_sent = 0;
+                .print_file_bytes_sent = 0
         };
 
         uart = new SerialPort(250000, GPIO_NUM_16, GPIO_NUM_13, parse_report_callback);

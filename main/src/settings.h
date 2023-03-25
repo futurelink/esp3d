@@ -9,6 +9,9 @@ class Settings {
 private:
     char *ssid;
     char *password;
+    char *ip;
+
+    bool extract(char **setting, const char *str, const char *name);
 
 public:
     explicit Settings();
@@ -16,6 +19,7 @@ public:
     esp_err_t load();
     void unload();
 
+    char *get_ip() const;
     char *get_ssid() const;
     char *get_password() const;
 };

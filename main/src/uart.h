@@ -57,6 +57,8 @@ public:
 
     void lock(bool locked);
     [[nodiscard]] bool is_locked() const;
+
+    void set_printer_buffer_size(size_t size);
 };
 
 
