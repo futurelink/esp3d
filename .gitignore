@@ -5,3 +5,4 @@
 /cmake-build-debug-esp32
 /.idea
 /__cmake_systeminformation
+/*.xcf

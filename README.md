@@ -25,15 +25,16 @@ Please feel free to report if you made it work with your printer.
 First you need a ESP32-CAM module which should be connected to your 3D-printer UART
 like in the picture below:
 
-Then you need to upload a firmware. I guess ESP32 Flasher utility can be used for 
-that:
+![alt text](./connection-example.png "ESP32-cam pins usage")
+
+Then you need to upload a firmware. I guess [ESP32 Flasher](https://www.espressif.com/en/support/download/other-tools) utility can be used for 
+that.
 
 You also need to prepare (not necessarily) blank SD-card. There you got to 
 create a directory called 'esp3d' and put there a file called 'settings' which
 should contain your Wi-Fi credentials:
 
-`ssid=your_favorite_ap_ssid`
-
+`ssid=your_favorite_ap_ssid`\
 `password=your_supa_dupa_strong_password`
 
 These are mandatory. If you want to add an IP address for your printer you may use:
