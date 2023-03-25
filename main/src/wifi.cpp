@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include "wifi.h"
 
 static const char TAG[] = "stm32-print-wifi";
@@ -34,7 +36,7 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id
     }
 }
 
-void wifi_connect() {
+void wifi_connect(const char *ssid, const char *password) {
     wifi_state.connected = false;
     wifi_state.event_group = xEventGroupCreate();
 
@@ -51,13 +53,10 @@ void wifi_connect() {
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, nullptr, &instance_any_id));
     ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, nullptr, &instance_got_ip));
 
-    wifi_config_t wifi_config = {
-            .sta = {
-                    .ssid = WIFI_SSID,
-                    .password = WIFI_PASS,
-                    .threshold = { .authmode = WIFI_AUTH_WPA2_PSK },
-            },
-    };
+    wifi_config_t wifi_config = { .sta = { .threshold = { .authmode = WIFI_AUTH_WPA2_PSK }}};
+    strcpy((char*) wifi_config.sta.ssid, ssid);
+    strcpy((char*) wifi_config.sta.password, ssid);
+
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
     ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
@@ -71,13 +70,9 @@ void wifi_connect() {
                                            pdFALSE,
                                            portMAX_DELAY);
 
-    if (bits & WIFI_CONNECTED_BIT) {
-        ESP_LOGI(TAG, "Connected to AP SSID: %s password: %s", WIFI_SSID, WIFI_PASS);
-    } else if (bits & WIFI_FAIL_BIT) {
-        ESP_LOGI(TAG, "Failed to connect to SSID: %s, password: %s", WIFI_SSID, WIFI_PASS);
-    } else {
-        ESP_LOGE(TAG, "UNEXPECTED EVENT");
-    }
+    if (bits & WIFI_CONNECTED_BIT) ESP_LOGI(TAG, "Connected to AP SSID: %s password: %s", ssid, password);
+    else if (bits & WIFI_FAIL_BIT) ESP_LOGI(TAG, "Failed to connect to SSID: %s, password: %s", ssid, password);
+    else ESP_LOGE(TAG, "UNEXPECTED EVENT");
 
     /* Unregister event handlers */
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));

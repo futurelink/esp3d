@@ -34,7 +34,10 @@ void Printer::parse_report(const char *report) {
 #endif
         if (report[2] != 0) {
             // Temperature report may be after 'ok', so we need to get it here
-            if (strncmp(&report[3], "T:", 2) == 0) parse_temperature_report(&report[3]);
+            if (strncmp(&report[3], "T:", 2) == 0) {
+                parse_temperature_report(&report[3]);
+                state.status_requested = false; // This was the answer on status request, so we reset the flag
+            }
         }
         if (state.status == PRINTER_UNKNOWN) state.status = PRINTER_IDLE;
     }
@@ -45,7 +48,6 @@ void Printer::parse_report(const char *report) {
     }
     else if (strncmp(report, "T:", 2) == 0) {
         parse_temperature_report(report);
-        state.status_requested = false; // This was the answer on status request, so we reset the flag
     }
     else if (strncmp(&report[1], "T:", 2) == 0) {
         parse_temperature_report(&report[1]);

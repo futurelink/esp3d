@@ -1,15 +1,15 @@
 #include <esp_event.h>
 #include <nvs_flash.h>
-#include <driver/gpio.h>
 
 #include "wifi.h"
 #include "sdcard.h"
 #include "server.h"
-#include "uart.h"
 #include "printer.h"
+#include "settings.h"
 
 Printer printer;
 Server server;
+Settings settings;
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,9 +28,11 @@ void app_main(void) {
     if (ret != ESP_OK) return;
 
     sdcard_init();
-    wifi_connect();
-    server.start();
-    printer.init();
+    if (settings.load() == ESP_OK) {
+        wifi_connect();
+        server.start();
+        printer.init();
+    }
 }
 
 #ifdef __cplusplus

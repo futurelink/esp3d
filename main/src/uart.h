@@ -18,16 +18,16 @@ private:
     int baud;
     gpio_num_t txd_pin;
     gpio_num_t rxd_pin;
+
     unsigned long command_id_cnt;
     unsigned long command_id_sent;
     unsigned long command_id_confirmed;
-    char **command_buffer;
+
+    char command_buffer[COMMAND_BUFFER_SIZE][64];
     uint8_t command_buffer_head;
     volatile uint8_t command_buffer_tail;
     volatile uint8_t command_buffer_tail_confirmed;
     bool locked;
-
-    unsigned long int service_cmd_id;
 
     TaskHandle_t task_send;
     TaskHandle_t task_receive;

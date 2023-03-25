@@ -1,6 +1,8 @@
 #include "uart.h"
 #include "server.h"
 
+//#define DEBUG
+
 static const char TAG[] = "esp3d-print-uart";
 
 extern Server server;
@@ -18,7 +20,7 @@ SerialPort::SerialPort(int baud, gpio_num_t rxd_pin, gpio_num_t txd_pin, void (*
     command_id_cnt = 0;
     command_id_sent = 0;
     command_id_confirmed = 0;
-    command_buffer = (char **) malloc(COMMAND_BUFFER_SIZE * sizeof(char *));
+    //command_buffer = (char **) malloc(COMMAND_BUFFER_SIZE * sizeof(char *));
     command_buffer_head = 0;
     command_buffer_tail = 0;
     command_buffer_tail_confirmed = 0;
@@ -45,7 +47,7 @@ unsigned long SerialPort::send(const char *command) {
     // Allocate memory in a buffer and copy command, reserve 1 character in case
     // when there's no \n in the end, and we need to add it.
     uint8_t len = strlen(command) + 2;
-    command_buffer[command_buffer_head] = (char *) malloc(len);
+    //command_buffer[command_buffer_head] = (char *) malloc(len);
     char *ptr = command_buffer[command_buffer_head];
     strcpy(ptr, command);
     if (ptr[len-3] != '\n') { // add newline character if it's not there
@@ -194,15 +196,14 @@ void SerialPort::transmit_confirm() {
 #ifdef DEBUG
     ESP_LOGI(TAG, "uart_transmit_confirm start");
 #endif
-    free(command_buffer[command_buffer_tail_confirmed]);    // Free sent command buffer
+    //free(command_buffer[command_buffer_tail_confirmed]);    // Free sent command buffer
     uint8_t next = command_buffer_tail_confirmed + 1;       // Increment confirmed number
     if (next == COMMAND_BUFFER_SIZE) next = 0;
     command_buffer_tail_confirmed = next;
     command_id_confirmed++;
 
 #ifdef DEBUG
-    ESP_LOGI(TAG, "uart_transmit_confirm done tail=%d / tail_conf=%d",
-             uart_state.command_buffer_tail, uart_state.command_buffer_tail_confirmed);
+    ESP_LOGI(TAG, "uart_transmit_confirm done tail=%d / tail_conf=%d", command_buffer_tail, command_buffer_tail_confirmed);
 #endif
 }
 

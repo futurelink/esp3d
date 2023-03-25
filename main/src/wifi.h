@@ -10,9 +10,6 @@
 #include <esp_log.h>
 #include <esp_wifi.h>
 
-#define WIFI_SSID       "MikroTik"
-#define WIFI_PASS       "Sae90W80"
-
 #define WIFI_FAIL_BIT       BIT0
 #define WIFI_CONNECTED_BIT  BIT1
 
