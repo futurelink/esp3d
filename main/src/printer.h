@@ -29,7 +29,7 @@
 /**
  * Callbacks definitions
  */
-void parse_report_callback(const char *report);
+bool parse_report_callback(const char *report);
 
 /**
  * Printer class definition
@@ -41,7 +41,9 @@ typedef struct {
     bool status_requested;
     bool status_updated;
     float temp_hot_end;         // Hot end temperature
+    float temp_hot_end_target;
     float temp_bed;             // Heat bed temperature
+    float temp_bed_target;
 
     bool printing_stop;         // Flags printer to stop its job
     FILE *print_file;           // Descriptor of G-code file
@@ -66,14 +68,16 @@ public:
     void set_status(PrinterStatus st);
     [[nodiscard]] FILE *get_opened_file() const;
 
-    void parse_report(const char *report);
+    bool parse_report(const char *report);
     void parse_temperature_report(const char *report);
 
     unsigned long int send_cmd(const char *cmd);
     SerialPort *get_uart();
     [[nodiscard]] PrinterStatus get_status() const;
     [[nodiscard]] float get_temp_hot_end() const;
+    [[nodiscard]] float get_temp_hot_end_target() const;
     [[nodiscard]] float get_temp_bed() const;
+    [[nodiscard]] float get_temp_bed_target() const;
     [[nodiscard]] float get_progress() const;
 
 private:

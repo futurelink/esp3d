@@ -51,51 +51,84 @@ Printer::Printer() {
     uart = new SerialPort(250000, GPIO_NUM_16, GPIO_NUM_13, parse_report_callback);
 }
 
+/**
+ * Parses Marlin temperature report string and updates the status,
+ * which looks like this: T:248.34 /245.00 B:100.81 /100.00 @:33 B@:128 W:9
+ * @param report
+ */
 void Printer::parse_temperature_report(const char *report) {
-    //ESP_LOGI(TAG, "Got temperature report %s", report);
-    float tc, bc;
-    int x, y;
-    sscanf(report, "T:%f /%f B:%f /%f @:%d B@:%d", &state.temp_hot_end, &tc, &state.temp_bed, &bc, &x, &y);
+    unsigned short flag = 0, cnt = 0, pos = 0;
+    char val[10];
+    do {
+        unsigned short len = 0;
+        switch (report[cnt]) {
+            case 'T': flag = (1 << 0); break;
+            case 'B': flag = (1 << 1); break;
+            case '@': if (flag & (1 << 1)) flag = ((1 << 2) | (1 << 1)); else flag = ((1 << 2) | (1 << 0)); break;
+            case ':': case '/':  // Save position
+                pos = cnt + 1;
+                if (report[cnt] == '/') flag |= (1 << 3);       // Target
+                break;
+            case 'W': flag = (1 << 5); break;
+            case ' ': case 0:
+                len = (cnt - pos > 9) ? 10 : cnt - pos;
+                strncpy(val, &report[pos], len);
+                val[len] = 0;
+                char *end;
+                float val_f = strtof(val, &end);
+                if (flag & (1 << 0)) {
+                    if (flag & (1 << 3)) { state.temp_hot_end_target = val_f; flag = 0; }
+                    else if (flag & (1 << 2)) { } // Power
+                    else state.temp_hot_end = val_f;
+                } else if (flag & (1 << 1)) {
+                    if (flag & (1 << 3)) { state.temp_bed_target = val_f; flag = 0; }
+                    else if (flag & (1 << 2)) { } // Power
+                    else state.temp_bed = val_f;
+                }
+                break;
+        }
+    } while (report[cnt++] != 0);
+
     state.status_updated = true;
 }
 
-void Printer::parse_report(const char *report) {
+bool Printer::parse_report(const char *report) {
     // Save last report
     strcpy(state.last_report, report);
 
     // ok - confirmed message from printer. Each sent command MUST be answered with
     // 'ok'. Even if it was unknown command, Marlin answers 'ok' with preceding 'echo'.
-    if ((report[0] == 'o') && (report[1] == 'k')) {
+    if ((state.last_report[0] == 'o') && (state.last_report[1] == 'k')) {
         uart->transmit_confirm();
         uart->lock(false);
 #ifdef DEBUG
 //        ESP_LOGI(TAG, "Confirmed #%lu", uart->get_command_id_confirmed());
 #endif
-        if (report[2] != 0) {
+        if ((state.last_report[2] != 0) && (state.last_report[2] != '\n')) {
             // Temperature report may be after 'ok', so we need to get it here
-            if (strncmp(&report[3], "T:", 2) == 0) {
-                parse_temperature_report(&report[3]);
-            }
+            if (strncmp(&state.last_report[3], "T:", 2) == 0) parse_temperature_report(&state.last_report[3]);
         }
         if (state.status == PRINTER_UNKNOWN) state.status = PRINTER_IDLE;
+        return true;
     }
-    else if (strncmp(report, "echo:busy: ", 11) == 0) {
+
+    if (strncmp(state.last_report, "echo:busy: ", 11) == 0) {
         if (state.status != PRINTER_PRINTING) state.status = PRINTER_WORKING;
         uart->lock(true);
-//        ESP_LOGI(TAG, "Busy");
     }
-    else if (strncmp(report, "T:", 2) == 0) {
+    else if (strncmp(state.last_report, "T:", 2) == 0) {
         parse_temperature_report(report);
     }
-    else if (strncmp(&report[1], "T:", 2) == 0) {
-        parse_temperature_report(&report[1]);
+    else if (strncmp(&state.last_report[1], "T:", 2) == 0) {
+        parse_temperature_report(&state.last_report[1]);
     }
-    else if (strncmp(report, "X:", 2) == 0) {
+    else if (strncmp(state.last_report, "X:", 2) == 0) {
 //        ESP_LOGI(TAG, "Got position report %s", report);
     }
-    else if (strncmp(report, "measured", 8) == 0) {
+    else if (strncmp(state.last_report, "measured", 8) == 0) {
 //        ESP_LOGI(TAG, "Got probe report %s", report);
     }
+    return false;
 }
 
 /**
@@ -123,6 +156,8 @@ void Printer::parse_report(const char *report) {
     while (true) {
         ESP_LOGI(TAG, "Command log: sent #%lu, confirmed #%lu, lock: %d, last report: '%s'",
                  p->uart->get_command_id_sent(), p->uart->get_command_id_confirmed(), p->uart->is_locked(), p->state.last_report);
+        ESP_LOGI(TAG, "Command log: head #%d, tail #%d, conf: #%d",
+                 p->uart->get_buffer_head(), p->uart->get_buffer_tail(), p->uart->get_buffer_confirmed());
         vTaskDelay(1000 / portTICK_PERIOD_MS);  // Wait 1 sec
     }
 }
@@ -189,7 +224,9 @@ esp_err_t Printer::stop() {
 unsigned long int Printer::send_cmd(const char *cmd) { return uart->send(cmd); }
 SerialPort *Printer::get_uart() { return uart; }
 float Printer::get_temp_bed() const { return state.temp_bed; }
+float Printer::get_temp_bed_target() const { return state.temp_bed_target; }
 float Printer::get_temp_hot_end() const { return state.temp_hot_end; }
+float Printer::get_temp_hot_end_target() const { return state.temp_hot_end_target; }
 PrinterStatus Printer::get_status() const { return state.status; }
 void Printer::set_status(PrinterStatus st) { state.status = st; }
 FILE *Printer::get_opened_file() const { return state.print_file; }
@@ -202,6 +239,6 @@ float Printer::get_progress() const {
 /**
  * Callbacks
  */
-void parse_report_callback(const char *report) {
-    printer.parse_report(report);
+bool parse_report_callback(const char *report) {
+    return printer.parse_report(report);
 }

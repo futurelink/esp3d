@@ -50,14 +50,10 @@ private:
     volatile uint8_t command_buffer_tail_confirmed;
     bool locked;
 
-    unsigned int last_sent_time;
-
-    TaskHandle_t task_send;
-    TaskHandle_t task_receive;
-    TaskHandle_t task_watchdog;
+    TaskHandle_t task_rx_tx;
 
     uint8_t printer_buffer_size;
-    void (*printer_response_parse_callback)(const char *resp);
+    bool (*printer_response_parse_callback)(const char *resp);
 
     char str[UART_TMP_BUF_SIZE];
     char uart_rx_buffer[UART_TMP_BUF_SIZE];
@@ -66,28 +62,28 @@ private:
     portMUX_TYPE uart_mux;
 
 public:
-    explicit SerialPort(int baud, gpio_num_t rxd_pin, gpio_num_t txd_pin, void (*callback)(const char *));
+    explicit SerialPort(int baud, gpio_num_t rxd_pin, gpio_num_t txd_pin, bool (*callback)(const char *));
 
     esp_err_t init();
     unsigned long send(const char *command);
 
-    [[noreturn]] static void receive_task(void *args);
-    [[noreturn]] static void send_task(void *args);
-    [[noreturn]] static void watchdog_task(void *args);
+    [[noreturn]] static void rx_tx_task(void *args);
 
-    void receive();
+    bool receive(char *rx_buffer);
 
     bool transmit_from_buffer();
     void transmit_confirm();
 
     [[nodiscard]] unsigned long int get_command_id_confirmed() const;
     [[nodiscard]] unsigned long int get_command_id_sent() const;
-    [[nodiscard]] bool is_all_confirmed() const;
 
     void lock(bool locked);
     [[nodiscard]] bool is_locked() const;
 
     void set_printer_buffer_size(size_t size);
+    [[nodiscard]] int get_buffer_head() const;
+    [[nodiscard]] int get_buffer_tail() const;
+    [[nodiscard]] int get_buffer_confirmed() const;
 };
 
 

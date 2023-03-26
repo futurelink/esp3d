@@ -32,7 +32,7 @@ like in the picture below:
 Then you need to upload a firmware. I guess [ESP32 Flasher](https://www.espressif.com/en/support/download/other-tools) utility can be used for 
 that.
 
-You also need to prepare (not necessarily) blank SD-card. There you got to 
+You also need to prepare a blank (not necessarily) SD-card. There you got to 
 create a directory called 'esp3d' and put there a file called 'settings' which
 should contain your Wi-Fi credentials:
 
