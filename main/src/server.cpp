@@ -23,6 +23,7 @@
 #include "sdcard.h"
 #include "multipart.h"
 #include "printer.h"
+#include "camera.h"
 
 #include "resources/include/server_main_html.h"
 #include "resources/include/server_main_css.h"
@@ -39,6 +40,7 @@ extern Printer printer;
 #define TYPE_TEXT_JAVASCRIPT            "text/javascript"
 #define TYPE_APPLICATION_JSON           "application/json"
 #define TYPE_IMAGE_PNG                  "image/png"
+#define TYPE_IMAGE_JPEG                 "image/jpeg"
 
 #define UPLOAD_FILE_NAME_MAX_LEN        48
 #define UPLOAD_PART_BUFFER_SIZE         4096
@@ -181,6 +183,12 @@ esp_err_t Server::get_printer_handler(httpd_req_t *req) {
         sprintf(str, R"({"status":"%s","hot_end":"%.2f","bed":"%.2f"})", printer_state_str(),
                 printer.get_temp_hot_end(), printer.get_temp_bed());
         httpd_resp_send(req, str, HTTPD_RESP_USE_STRLEN);
+    } else if (strcmp(req->uri, "/printer/photo") == 0) {
+        httpd_resp_set_type(req, TYPE_IMAGE_JPEG);
+        camera_fb_t *pic = esp_camera_fb_get();
+        ESP_LOGI(TAG, "Picture taken! Its size was: %zu bytes", pic->len);
+        httpd_resp_send(req, (const char *) pic->buf, pic->len);
+        esp_camera_fb_return(pic);
     } else if (strncmp(req->uri, "/printer/send?cmd=", 18) == 0) {
         if (printer.get_status() == PRINTER_IDLE) {
             size_t len = MIN(strlen(req->uri) - 18, COMMAND_MAX_LENGTH);

@@ -11,8 +11,6 @@ especially for 3D printers that has no on-board Wi-Fi or any other networking mo
 This firmware by-design can run on ESP32-Cam cheap module which has SD-card interface
 and enough free pins just to connect it to the printer with UART.
 
-
-
 ### What it can do?
 It can act as a file server, so you can upload sliced G-Code onto SD-card, then
 select a file to print and track printing progress in cute web-UI. ~~Unfortunately
@@ -28,6 +26,11 @@ First you need a ESP32-CAM module which should be connected to your 3D-printer U
 like in the picture below:
 
 ![alt text](./connection-example.png "ESP32-cam pins usage")
+
+You have to flash fuses to disable using GPIO12 as a  bootstrap pin. This can be done
+with thie command:
+
+`espefuse.py --port <esp32_cam_com_port> set_flash_voltage 3.3V`
 
 Then you need to upload a firmware. I guess [ESP32 Flasher](https://www.espressif.com/en/support/download/other-tools) utility can be used for 
 that.

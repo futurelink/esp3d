@@ -42,7 +42,6 @@ private:
 
     volatile unsigned int command_id_cnt;
     volatile unsigned int command_id_sent;
-    volatile unsigned int command_id_confirmed;
 
     char command_buffer[COMMAND_BUFFER_SIZE][COMMAND_MAX_LENGTH];
     uint8_t command_buffer_head;
@@ -52,40 +51,30 @@ private:
 
     TaskHandle_t task_rx_tx;
 
-    uint8_t printer_buffer_size;
     bool (*printer_response_parse_callback)(const char *resp);
 
+    char *rx_buffer;
     char str[UART_TMP_BUF_SIZE];
-    char uart_rx_buffer[UART_TMP_BUF_SIZE];
     uint16_t str_pos;
 
-    portMUX_TYPE uart_mux;
+    bool receive();
+    bool transmit();
 
 public:
-    explicit SerialPort(int baud, gpio_num_t rxd_pin, gpio_num_t txd_pin, bool (*callback)(const char *));
+    explicit        SerialPort(int baud, gpio_num_t rxd_pin, gpio_num_t txd_pin, bool (*callback)(const char *));
+                    ~SerialPort();
 
-    esp_err_t init();
-    unsigned long send(const char *command);
+    esp_err_t       init();
+    unsigned long   send(const char *command);
 
     [[noreturn]] static void rx_tx_task(void *args);
 
-    bool receive(char *rx_buffer);
-
-    bool transmit_from_buffer();
-    void transmit_confirm();
-
-    [[nodiscard]] unsigned long int get_command_id_confirmed() const;
     [[nodiscard]] unsigned long int get_command_id_sent() const;
 
     void lock(bool locked);
     [[nodiscard]] bool is_locked() const;
-
-    void set_printer_buffer_size(size_t size);
     [[nodiscard]] int get_buffer_head() const;
     [[nodiscard]] int get_buffer_tail() const;
-    [[nodiscard]] int get_buffer_confirmed() const;
 };
-
-
 
 #endif //ESP32_PRINT_UART_H

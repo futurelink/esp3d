@@ -22,7 +22,6 @@
 #include "uart.h"
 #include "server.h"
 
-
 //#define DEBUG
 
 static const char TAG[] = "esp3d-print-uart";
@@ -36,17 +35,15 @@ SerialPort::SerialPort(int baud, gpio_num_t rxd_pin, gpio_num_t txd_pin, bool (*
     this->locked = false;
     this->str_pos = 0;
     this->task_rx_tx = nullptr;
+    this->rx_buffer = (char *) malloc(UART_TMP_BUF_SIZE);
 
     // Create command buffer
     command_id_cnt = 0;
     command_id_sent = 0;
-    command_id_confirmed = 0;
-    //command_buffer = (char **) malloc(COMMAND_BUFFER_SIZE * sizeof(char *));
     command_buffer_head = 0;
     command_buffer_tail = 0;
     command_buffer_tail_confirmed = 0;
 
-    printer_buffer_size = 3;
     printer_response_parse_callback = (bool (*)(const char *)) callback;
 }
 
@@ -63,12 +60,11 @@ unsigned long SerialPort::send(const char *command) {
     if (next_head == COMMAND_BUFFER_SIZE) next_head = 0;
 
     // Cannot add - buffer is full or full of unconfirmed messages
-    if ((next_head == command_buffer_tail_confirmed) || (next_head == command_buffer_tail)) return 0;
+    if (next_head == command_buffer_tail) return 0;
 
     // Allocate memory in a buffer and copy command, reserve 1 character in case
     // when there's no \n in the end, and we need to add it.
     uint8_t len = strlen(command);
-    //command_buffer[command_buffer_head] = (char *) malloc(len);
     char *ptr = command_buffer[command_buffer_head];
     strcpy(ptr, command);
     if (ptr[len-1] != '\n') {   // add newline character if last character is not
@@ -121,49 +117,47 @@ void SerialPort::rx_tx_task(void *args) {
     serialPort->str_pos = 0;
 
     bool can_send = true;
-    char rx_buffer[UART_TMP_BUF_SIZE];
     while (true) {
-        can_send = can_send || serialPort->receive(rx_buffer);
-        if (can_send) serialPort->transmit_from_buffer();
+        can_send = serialPort->receive() || can_send;
+        if (can_send) can_send = !serialPort->transmit();
         vPortYield();
     }
 }
 
-bool SerialPort::receive(char *rx_buffer) {
-    char str_t[256];
+/* Receive cycle */
+bool SerialPort::receive() {
     bool ok_received = false;
-
-    /* Receive cycle */
     int len = uart_read_bytes(UART, rx_buffer, UART_TMP_BUF_SIZE - 1, 0);
     if (len > 0) {
-        uint16_t cnt = 0;
-
 #ifdef DEBUG
         esp_log_write(ESP_LOG_INFO, TAG, "uart_receive start");
-
-        memcpy(str_t, rx_buffer, len); str_t[len] = 0;
-        esp_log_write(ESP_LOG_INFO, TAG, "<%d:%s>\n", len, str_t);
 #endif
+        uint16_t cnt = 0;
 
         // Workaround(!!!)
         // There's a bug in IDF that corrupts an answer from printer,
         // so we can't get confirmation. I decided that any string starting with 'ok'
         // is enough to be certain that printer confirmed our previous command.
-        if ((len >= 2) && (str_t[0] == 'o') && (str_t[1] == 'k')) {
-            vPortEnterCritical(&uart_mux);
-            ok_received = printer_response_parse_callback(str_t);
-            vPortExitCritical(&uart_mux);
-            cnt += 2;
+        char str_t[64];
+        int l = (len > 63) ? 63 : len;
+        memcpy(str_t, rx_buffer, l); str_t[l] = 0;
+//#ifdef DEBUG
+        esp_log_write(ESP_LOG_INFO, TAG, "<%d:%s>\n", len, str_t);
+//#endif
+        if ((len >= 2) && (rx_buffer[0] == 'o') && (rx_buffer[1] == 'k')) {
+            printer_response_parse_callback(str_t);
+            ok_received = true;
+            cnt = 2;
         }
 
         // Parse the rest of the string
         do {
             if (rx_buffer[cnt] == '\n') {
                 str[str_pos] = 0;
-                str_pos = 0;
-                vPortEnterCritical(&uart_mux);
-                ok_received = ok_received || printer_response_parse_callback(str);
-                vPortExitCritical(&uart_mux);
+                if (str_pos > 0) {
+                    ok_received = printer_response_parse_callback(str) || ok_received;
+                    str_pos = 0;
+                }
             } else {
                 str[str_pos++] = rx_buffer[cnt];
                 str[str_pos] = 0;
@@ -182,56 +176,24 @@ bool SerialPort::receive(char *rx_buffer) {
  * Sends command from buffer's tail, but does not increment buffer confirmed pointer.
  * It should be incremented a bit later when confirmation comes from printer.
  */
-bool SerialPort::transmit_from_buffer() {
+bool SerialPort::transmit() {
     uint8_t tail = command_buffer_tail;
     if (tail == command_buffer_head) return false;            // Empty buffer
-    if (tail != command_buffer_tail_confirmed) {
-#ifdef DEBUG
-        ESP_LOGI(TAG, "There's unconfirmed message %d / %d", tail, command_buffer_tail_confirmed);
-#endif
-        return true;   // Don't send anything until we haven't got answer
-    }
 
 #ifdef DEBUG
     ESP_LOGI(TAG, "uart_transmit_from_buffer start ");
-#else
-    vPortEnterCritical(&uart_mux);
 #endif
+
     uart_write_bytes(UART, command_buffer[tail], strlen(command_buffer[tail]));
     if (++tail == COMMAND_BUFFER_SIZE) tail = 0;        // Increment transmit pointer
     command_buffer_tail = tail;
     auto id = command_id_sent; command_id_sent = id + 1; // Increment sent command ID
-#ifndef DEBUG
-    vPortExitCritical(&uart_mux);
-#else
+
+#ifdef DEBUG
     ESP_LOGI(TAG, "uart_transmit_from_buffer done");
 #endif
 
     return true;
-}
-
-/**
- * Internal function. Shifts confirmed message pointer in UART ring buffer.
- */
-void SerialPort::transmit_confirm() {
-#ifdef DEBUG
-    ESP_LOGI(TAG, "uart_transmit_confirm start");
-#endif
-    //free(command_buffer[command_buffer_tail_confirmed]);    // Free sent command buffer
-    uint8_t next = command_buffer_tail_confirmed + 1;       // Increment confirmed number
-    if (next == COMMAND_BUFFER_SIZE) next = 0;
-    command_buffer_tail_confirmed = next;
-
-    // Increment confirmed command ID
-    auto id = command_id_confirmed; command_id_confirmed = id + 1;
-
-#ifdef DEBUG
-    ESP_LOGI(TAG, "uart_transmit_confirm done tail=%d / tail_conf=%d", command_buffer_tail, command_buffer_tail_confirmed);
-#endif
-}
-
-unsigned long int SerialPort::get_command_id_confirmed() const {
-    return command_id_confirmed;
 }
 
 unsigned long int SerialPort::get_command_id_sent() const {
@@ -253,7 +215,9 @@ bool SerialPort::is_locked() const {
  * @param size
  * @return
  */
-void SerialPort::set_printer_buffer_size(size_t size) { printer_buffer_size = size; }
 int SerialPort::get_buffer_head() const { return command_buffer_head; }
 int SerialPort::get_buffer_tail() const { return command_buffer_tail; }
-int SerialPort::get_buffer_confirmed() const { return command_buffer_tail_confirmed; }
+
+SerialPort::~SerialPort() {
+    free(rx_buffer);
+}

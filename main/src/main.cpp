@@ -26,6 +26,7 @@
 #include "server.h"
 #include "printer.h"
 #include "settings.h"
+#include "camera.h"
 
 Printer printer;
 Server server;
@@ -38,6 +39,8 @@ extern "C" {
 void app_main(void) {
 
     ESP_ERROR_CHECK(esp_event_loop_create_default());
+
+    gpio_pullup_en(GPIO_NUM_12);
 
     //Initialize NVS
     esp_err_t ret = nvs_flash_init();
@@ -52,6 +55,10 @@ void app_main(void) {
         wifi_connect(settings.get_ssid(), settings.get_password(), settings.get_ip());
         server.start();
         printer.init();
+
+        if (camera_init() == ESP_OK) {
+            camera_take_picture();
+        }
     }
 }
 

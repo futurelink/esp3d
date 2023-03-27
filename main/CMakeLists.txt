@@ -8,6 +8,7 @@ idf_component_register(SRCS
         "src/multipart.cpp"
         "src/printer.cpp"
         "src/settings.cpp"
+        "src/camera.cpp"
         INCLUDE_DIRS ".")
 
 # ---------------------------------------------------------------

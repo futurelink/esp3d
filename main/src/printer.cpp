@@ -41,14 +41,16 @@ Printer::Printer() {
             .status_requested = false,
             .status_updated = false,
             .temp_hot_end = 0,
+            .temp_hot_end_target = 0,
             .temp_bed = 0,
+            .temp_bed_target = 0,
             .printing_stop = false,
             .print_file = nullptr,
             .print_file_bytes = 0,
             .print_file_bytes_sent = 0
     };
 
-    uart = new SerialPort(250000, GPIO_NUM_16, GPIO_NUM_13, parse_report_callback);
+    uart = new SerialPort(250000, GPIO_NUM_12, GPIO_NUM_13, parse_report_callback);
 }
 
 /**
@@ -99,7 +101,6 @@ bool Printer::parse_report(const char *report) {
     // ok - confirmed message from printer. Each sent command MUST be answered with
     // 'ok'. Even if it was unknown command, Marlin answers 'ok' with preceding 'echo'.
     if ((state.last_report[0] == 'o') && (state.last_report[1] == 'k')) {
-        uart->transmit_confirm();
         uart->lock(false);
 #ifdef DEBUG
 //        ESP_LOGI(TAG, "Confirmed #%lu", uart->get_command_id_confirmed());
@@ -154,10 +155,9 @@ bool Printer::parse_report(const char *report) {
 [[noreturn]] void Printer::task_state_log([[gnu::unused]] void *args) {
     auto p = (Printer *) args;
     while (true) {
-        ESP_LOGI(TAG, "Command log: sent #%lu, confirmed #%lu, lock: %d, last report: '%s'",
-                 p->uart->get_command_id_sent(), p->uart->get_command_id_confirmed(), p->uart->is_locked(), p->state.last_report);
-        ESP_LOGI(TAG, "Command log: head #%d, tail #%d, conf: #%d",
-                 p->uart->get_buffer_head(), p->uart->get_buffer_tail(), p->uart->get_buffer_confirmed());
+        ESP_LOGI(TAG, "Command log: sent #%lu, lock: %d, last report: '%s'",
+                 p->uart->get_command_id_sent(), p->uart->is_locked(), p->state.last_report);
+        ESP_LOGI(TAG, "Command log: head #%d, tail #%d", p->uart->get_buffer_head(), p->uart->get_buffer_tail());
         vTaskDelay(1000 / portTICK_PERIOD_MS);  // Wait 1 sec
     }
 }
