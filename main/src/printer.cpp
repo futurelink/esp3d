@@ -196,11 +196,15 @@ void Printer::task_print(void *arg) {
     }
 }
 
-void Printer::init() {
-    uart->init();
+esp_err_t Printer::init() {
+    esp_err_t res = uart->init();
+    if (res != ESP_OK) return res;
+
     xTaskCreate(Printer::task_status_report, "printer_task_report", PRINTER_TASK_STACK_SIZE, this, tskIDLE_PRIORITY, nullptr);
     xTaskCreate(Printer::task_print, "printer_task_print", PRINTER_TASK_STACK_SIZE, this, tskIDLE_PRIORITY, nullptr);
     xTaskCreate(Printer::task_state_log, "printer_task_state", PRINTER_TASK_STATE_STACK_SIZE, this, tskIDLE_PRIORITY, nullptr);
+
+    return ESP_OK;
 }
 
 esp_err_t Printer::start(FILE *f) {
@@ -218,6 +222,10 @@ esp_err_t Printer::stop() {
     state.printing_stop = true;
     state.print_file_bytes = 0;
     state.print_file_bytes_sent = 0;
+    if (state.print_file != nullptr) {
+        fclose(state.print_file);
+        state.print_file = nullptr;
+    }
     return ESP_OK;
 }
 
@@ -230,6 +238,7 @@ float Printer::get_temp_hot_end_target() const { return state.temp_hot_end_targe
 PrinterStatus Printer::get_status() const { return state.status; }
 void Printer::set_status(PrinterStatus st) { state.status = st; }
 FILE *Printer::get_opened_file() const { return state.print_file; }
+
 float Printer::get_progress() const {
     if ((get_opened_file() != nullptr) && (state.print_file_bytes != 0)) {
         return roundf(((float)state.print_file_bytes_sent / (float)state.print_file_bytes) * 100) / 100;

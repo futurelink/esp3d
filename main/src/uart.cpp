@@ -42,7 +42,6 @@ SerialPort::SerialPort(int baud, gpio_num_t rxd_pin, gpio_num_t txd_pin, bool (*
     command_id_sent = 0;
     command_buffer_head = 0;
     command_buffer_tail = 0;
-    command_buffer_tail_confirmed = 0;
 
     printer_response_parse_callback = (bool (*)(const char *)) callback;
 }

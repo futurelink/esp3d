@@ -35,6 +35,7 @@
 static const char TAG[] = "esp3d-print-http";
 
 extern Printer printer;
+extern Camera camera;
 
 #define TYPE_TEXT_CSS                   "text/css"
 #define TYPE_TEXT_JAVASCRIPT            "text/javascript"
@@ -185,10 +186,7 @@ esp_err_t Server::get_printer_handler(httpd_req_t *req) {
         httpd_resp_send(req, str, HTTPD_RESP_USE_STRLEN);
     } else if (strcmp(req->uri, "/printer/photo") == 0) {
         httpd_resp_set_type(req, TYPE_IMAGE_JPEG);
-        camera_fb_t *pic = esp_camera_fb_get();
-        ESP_LOGI(TAG, "Picture taken! Its size was: %zu bytes", pic->len);
-        httpd_resp_send(req, (const char *) pic->buf, pic->len);
-        esp_camera_fb_return(pic);
+        uint8_t number = camera.take_photo();
     } else if (strncmp(req->uri, "/printer/send?cmd=", 18) == 0) {
         if (printer.get_status() == PRINTER_IDLE) {
             size_t len = MIN(strlen(req->uri) - 18, COMMAND_MAX_LENGTH);
@@ -240,12 +238,12 @@ esp_err_t Server::get_files_handler(httpd_req_t *req) {
 
     auto ctx = (context_t *) req->user_ctx;
     if (strncmp(req->uri, "/files/?select=", 15) == 0) {
-        free(ctx->selected_file);
+        if (ctx->selected_file != nullptr) free(ctx->selected_file);
         ctx->selected_file = (char *)malloc(strlen(req->uri) - 14 + 1);
         url_decode(ctx->selected_file, &req->uri[15]);
         if (!sdcard_has_file(ctx->selected_file)) {
-            //free(printer_state.selected_file);
-            //printer_state.selected_file = nullptr;
+            free(ctx->selected_file);
+            ctx->selected_file = nullptr;
             httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, R"({ "error" : "File not found" })");
             return ESP_OK;
         }
@@ -369,6 +367,7 @@ void Server::start() {
     context = (context_t *) malloc(sizeof(context_t));
     context->upload_file = nullptr;
     context->upload_buffer = nullptr;
+    context->selected_file = nullptr;
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG(); /* Generate default configuration */
     config.lru_purge_enable = true;

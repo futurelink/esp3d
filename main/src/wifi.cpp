@@ -101,7 +101,7 @@ void wifi_connect(const char *ssid, const char *password, const char *ip) {
     else ESP_LOGE(TAG, "UNEXPECTED EVENT");
 
     /* Unregister event handlers */
-    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
-    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
-    vEventGroupDelete(wifi_state.event_group);
+    //ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
+    //ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
+    //vEventGroupDelete(wifi_state.event_group);
 }

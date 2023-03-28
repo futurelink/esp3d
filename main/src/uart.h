@@ -46,7 +46,6 @@ private:
     char command_buffer[COMMAND_BUFFER_SIZE][COMMAND_MAX_LENGTH];
     uint8_t command_buffer_head;
     volatile uint8_t command_buffer_tail;
-    volatile uint8_t command_buffer_tail_confirmed;
     bool locked;
 
     TaskHandle_t task_rx_tx;

@@ -42,7 +42,13 @@
 #define CAM_PIN_HREF 23
 #define CAM_PIN_PCLK 22
 
-esp_err_t camera_init();
-uint8_t *camera_take_picture();
+class Camera {
+private:
+    bool initialized;
+
+public:
+    esp_err_t init();
+    unsigned int take_photo();
+};
 
 #endif //ESP32_PRINT_CAMERA_H

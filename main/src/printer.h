@@ -61,7 +61,7 @@ private:
 public:
     Printer();
 
-    void init();
+    esp_err_t init();
     esp_err_t start(FILE *f);
     esp_err_t stop();
 

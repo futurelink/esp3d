@@ -28,9 +28,12 @@
 #include "settings.h"
 #include "camera.h"
 
+Camera camera;
 Printer printer;
 Server server;
 Settings settings;
+
+static const char TAG[] = "esp3d-print";
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,11 +57,8 @@ void app_main(void) {
     if (settings.load() == ESP_OK) {
         wifi_connect(settings.get_ssid(), settings.get_password(), settings.get_ip());
         server.start();
-        printer.init();
-
-        if (camera_init() == ESP_OK) {
-            camera_take_picture();
-        }
+        if (printer.init() != ESP_OK) ESP_LOGE(TAG, "No printer interface initialized!");
+        if (camera.init() == ESP_OK) ESP_LOGW(TAG, "No camera available");
     }
 }
 
