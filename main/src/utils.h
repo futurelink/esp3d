@@ -22,5 +22,6 @@
 #define ESP32_PRINT_UTILS_H
 
 void url_decode(char *decoded_url, const char *url);
+void url_decode_utf8(wchar_t *decoded_url, const char *url);
 
 #endif // ESP32_PRINT_UTILS_H

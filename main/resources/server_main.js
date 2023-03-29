@@ -3,6 +3,7 @@ const storage = {
         "printer": {},
         "files": [],
         "uploading": false,
+        "upload_progress": undefined
     },
     "updated" : false
 };

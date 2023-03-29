@@ -58,7 +58,7 @@ void app_main(void) {
         wifi_connect(settings.get_ssid(), settings.get_password(), settings.get_ip());
         server.start();
         if (printer.init() != ESP_OK) ESP_LOGE(TAG, "No printer interface initialized!");
-        if (camera.init() == ESP_OK) ESP_LOGW(TAG, "No camera available");
+        if (camera.init() != ESP_OK) ESP_LOGW(TAG, "No camera available");
     }
 }
 

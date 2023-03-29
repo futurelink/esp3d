@@ -19,7 +19,6 @@
 */
 
 #include <dirent.h>
-
 #include "sdcard.h"
 
 typedef struct {
@@ -65,6 +64,7 @@ FILE *sdcard_open_file(const char *name, const char *mode) {
     }
     char path[255];
     sprintf(path, "%s/%s", MOUNT_POINT, name);
+    ESP_LOGI(TAG, "Opening '%s'", path);
     return fopen(path, mode);
 }
 
@@ -76,6 +76,7 @@ esp_err_t sdcard_delete_file(const char *name) {
 
     char path[255];
     sprintf(path, "%s/%s", MOUNT_POINT, name);
+    ESP_LOGI(TAG, "Deleting '%s'", path);
     struct stat st{};
     if (stat(path, &st) == 0) unlink(path);
 

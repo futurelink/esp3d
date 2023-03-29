@@ -165,17 +165,18 @@ bool Printer::parse_report(const char *report) {
 void Printer::task_print(void *arg) {
     auto p = (Printer *) arg;
     while (true) {
+        if (p->state.printing_stop) {
+            p->state.printing_stop = false;
+            p->state.print_file = nullptr;
+            break;
+        }
         auto f = p->get_opened_file();
         if (f != nullptr) {
             char line[80];
             ESP_LOGI(TAG, "Starting print...");
             p->state.status = PRINTER_PRINTING;
             while (fgets(line, 80, f) != nullptr) {
-                if (p->state.printing_stop) {
-                    p->state.printing_stop = false;
-                    p->state.print_file = nullptr;
-                    break;
-                }
+
 #ifdef DEBUG
                 ESP_LOGI(TAG, "Got line: %s", line);
 #endif
