@@ -24,8 +24,10 @@
 static const char TAG[] = "esp3d-settings";
 
 static const char settings_ip[] = "ip=";
+static const char settings_mask[] = "netmask=";
 static const char settings_ssid[] = "ssid=";
 static const char settings_password[] = "password=";
+static const char settings_baud_rate[] = "baudrate=";
 
 #define SETTINGS_MAX_LEN    128
 #define SETTINGS_FILE       "esp3d/settings"
@@ -34,6 +36,8 @@ Settings::Settings() {
     ssid = nullptr;
     password = nullptr;
     ip = nullptr;
+    netmask = nullptr;
+    baud_rate = 250000;
 }
 
 esp_err_t Settings::load() {
@@ -51,6 +55,14 @@ esp_err_t Settings::load() {
         if (extract(&ssid, str, settings_ssid)) continue;
         if (extract(&password, str, settings_password)) continue;
         if (extract(&ip, str, settings_ip)) continue;
+        if (extract(&netmask, str, settings_mask)) continue;
+
+        char *baud_str;
+        if (extract(&baud_str, str, settings_baud_rate)) {
+            baud_rate = atoi(baud_str);
+            free(baud_str);
+            continue;
+        }
     }
 
     fclose(f);
@@ -71,10 +83,13 @@ bool Settings::extract(char **setting, const char *str, const char *name) {
 
 void Settings::unload() {
     free(ip);
+    free(netmask);
     free(ssid);
     free(password);
 }
 
 char *Settings::get_ip() const { return ip; }
+char *Settings::get_netmask() const { return netmask; }
 char *Settings::get_ssid() const { return ssid; }
 char *Settings::get_password() const { return password; }
+unsigned int Settings::get_baud_rate() const { return baud_rate; }

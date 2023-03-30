@@ -21,6 +21,7 @@
 #include <cstring>
 
 #include "wifi.h"
+#include <lwip/ip4_addr.h>
 
 static const char TAG[] = "stm32-print-wifi";
 
@@ -56,12 +57,25 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id
     }
 }
 
-void wifi_connect(const char *ssid, const char *password, const char *ip) {
+void wifi_connect(const char *ssid, const char *password, const char *ip, const char *netmask) {
     wifi_state.connected = false;
     wifi_state.event_group = xEventGroupCreate();
 
     ESP_ERROR_CHECK(esp_netif_init());
-    esp_netif_create_default_wifi_sta();
+    esp_netif_t *my_sta = esp_netif_create_default_wifi_sta();
+
+    // Set static IP if assigned
+    if (ip != nullptr) {
+        esp_netif_dhcpc_stop(my_sta);
+
+        esp_netif_ip_info_t ip_info;
+        ip_info.ip.addr = ipaddr_addr(ip);
+        ip_info.netmask.addr = ((netmask != nullptr)) ? ipaddr_addr(netmask) : ipaddr_addr("255.255.255.0");
+        esp_netif_set_ip_info(my_sta, &ip_info);
+
+        esp_netif_dns_info_t dns_info;
+        dns_info.ip.u_addr.ip4.addr = ipaddr_addr("8.8.8.8"); // Set Google DNS temporarily
+    }
 
     const wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&config));
@@ -76,18 +90,12 @@ void wifi_connect(const char *ssid, const char *password, const char *ip) {
     wifi_config_t wifi_config = { .sta = { .threshold = { .authmode = WIFI_AUTH_WPA2_PSK }}};
     strcpy((char*) wifi_config.sta.ssid, ssid);
     strcpy((char*) wifi_config.sta.password, password);
-
     ESP_LOGI(TAG, "Connecting with SSID: %s, password: %s", ssid, password);
-
-    if (ip != nullptr) {
-        //esp_netif_dhcpc_stop(wifi_config.sta);
-    }
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
     ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
     ESP_ERROR_CHECK(esp_wifi_start());
-
     ESP_LOGI(TAG, "Started. Waiting for connection...");
 
     EventBits_t bits = xEventGroupWaitBits(wifi_state.event_group,

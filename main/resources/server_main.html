@@ -4,7 +4,7 @@
     <title>ESP3D Printer</title>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <base href="http://192.168.0.207/"/>
+    <!--<base href="http://192.168.0.207/"/>-->
     <style>
         div.loading { position: fixed; background: #cccccc; top: 0; left: 0; width: 100%; height: 100%;
             display: flex; flex-direction: column; align-items: center; align-content: center; justify-content: center;
@@ -27,7 +27,7 @@
         </div>
         <div class="prog" id="progress"></div>
     </div></div>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light" style="box-shadow: rgba(128,128,128,0.5) 0px 0px 6px;">
         <div class="container-fluid">
             <div class="navbar-brand">ESP3D Printer Server</div>
             <form class="d-flex" action="">
@@ -36,33 +36,31 @@
             </form>
         </div>
     </nav>
-    <div class="container mt-2 mt-lg-4">
-        <div class="row">
-            <div class="container col-lg-4 col-md-5">
+    <div class="container mt-2 mt-lg-4" style="flex-grow: 1; display: flex;">
+        <div class="row"  style="flex-grow: 1;">
+            <div class="container col-lg-4 col-md-5  px-1">
                 <div class="container col-xs-12 mx-0 px-0">
                     <div class="st">
-                        <div class="container mx-0 px-0" id="printer_status">
+                        <div class="container mx-0 px-0" id="printer_status" style="box-shadow: rgba(128,128,128,0.5) 0px 0px 6px; border-radius: 5pt;">
                             <div class="row container mx-0 px-2 py-2" style="background: #eeeeee; border-radius: 5pt 5pt 0 0;"><div class="col px-0 text-nowrap">Status: </div><div class="col px-0" id="printer_status_status"></div></div>
                             <div class="row container mx-0 px-2 py-2"><div class="col px-0 text-nowrap">Hot end temp: </div><div class="col px-0" id="printer_status_hot_end"></div></div>
                             <div class="row container mx-0 px-2 py-2"><div class="col px-0 text-nowrap">Bed temp: </div><div class="col px-0" id="printer_status_bed"></div></div>
                         </div>
                     </div>
-                    <div class="container mx-0 px-0 my-4" id="print_progress">
+                    <div class="container mx-0 px-0 my-2" id="print_progress" style="box-shadow: rgba(128,128,128,0.5) 0px 0px 6px; border-radius: 5pt;">
                         <div class="st px-2 py-2">
                             Print progress:
                             <div class="progress">
                                 <div class="progress-bar progress-bar-striped" id="print_progress_bar"
                                      role="progressbar" style="width: 0"
-                                     aria-valuenow="10" aria-valuemin="0" aria-valuemax="100">
-                                    0%
-                                </div>
+                                     aria-valuenow="10" aria-valuemin="0" aria-valuemax="100">0%</div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="container col-lg-8 col-md-7 mt-2 mt-md-0">
-                <div class="fl">
+            <div class="container col-lg-8 col-md-7 mt-0 mb-4 mb-sm-2 px-1" style="display: flex;">
+                <div class="fl" style="box-shadow: rgba(128,128,128,0.5) 0px 0px 6px; border-radius: 5pt;">
                     <div class="tb">
                         <button id="print_btn" class="btn btn-primary" disabled>Print</button>
                         <button id="upload_btn" class="btn btn-secondary">Upload file</button>

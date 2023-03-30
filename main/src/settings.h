@@ -30,6 +30,9 @@ private:
     char *ssid;
     char *password;
     char *ip;
+    char *netmask;
+
+    unsigned int baud_rate;
 
     bool extract(char **setting, const char *str, const char *name);
 
@@ -39,9 +42,11 @@ public:
     esp_err_t load();
     void unload();
 
-    char *get_ip() const;
-    char *get_ssid() const;
-    char *get_password() const;
+    [[nodiscard]] char *get_ip() const;
+    [[nodiscard]] char *get_netmask() const;
+    [[nodiscard]] char *get_ssid() const;
+    [[nodiscard]] char *get_password() const;
+    [[nodiscard]] unsigned int get_baud_rate() const;
 };
 
 #endif //ESP32_PRINT_SETTINGS_H

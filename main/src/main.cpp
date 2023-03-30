@@ -55,7 +55,7 @@ void app_main(void) {
 
     sdcard_init();
     if (settings.load() == ESP_OK) {
-        wifi_connect(settings.get_ssid(), settings.get_password(), settings.get_ip());
+        wifi_connect(settings.get_ssid(), settings.get_password(), settings.get_ip(), settings.get_netmask());
         server.start();
         if (printer.init() != ESP_OK) ESP_LOGE(TAG, "No printer interface initialized!");
         if (camera.init() != ESP_OK) ESP_LOGW(TAG, "No camera available");

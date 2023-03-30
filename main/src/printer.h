@@ -34,7 +34,7 @@ bool parse_report_callback(const char *report);
 /**
  * Printer class definition
  */
-enum PrinterStatus { PRINTER_UNKNOWN, PRINTER_IDLE, PRINTER_WORKING, PRINTER_PRINTING };
+enum PrinterStatus { PRINTER_DISCONNECTED, PRINTER_IDLE, PRINTER_WORKING, PRINTER_PRINTING };
 
 typedef struct {
     enum PrinterStatus status;  // Current printer status

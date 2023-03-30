@@ -44,12 +44,12 @@ function updateInterfaceAll() {
     if (state().uploading) {
         $("#blinder").css("display", "flex");
         if (state().upload_progress === undefined) $("#progress").html("Uploading...");
-        else $("#progress").html("Uploading: <br/>" + state().upload_progress + '%');
+        else $("#progress").html("Uploading: <br/>" + Math.round(state().upload_progress) + '%');
     } else $("#blinder").css("display", "none");
 
     if (state().printer.status === 'Printing') {
         let bar = $('#print_progress_bar');
-        let percent = (state().printer.progress * 100) + '%';
+        let percent = Math.round(state().printer.progress * 100) + '%';
         bar.css('width', percent); bar.html(percent);
         $('#print_progress').css('display', '');
     } else $('#print_progress').css('display', 'none');

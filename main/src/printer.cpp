@@ -25,6 +25,7 @@
 
 #include "server.h"
 #include "printer.h"
+#include "settings.h"
 
 #define COMMAND_PING                    "M105\n"
 #define PRINTER_TASK_STACK_SIZE         4096
@@ -32,12 +33,13 @@
 
 extern Printer printer;
 extern Server server;
+extern Settings settings;
 
 static const char TAG[] = "esp3d-printer";
 
 Printer::Printer() {
     state = {
-            .status = PRINTER_UNKNOWN,
+            .status = PRINTER_DISCONNECTED,
             .status_requested = false,
             .status_updated = false,
             .temp_hot_end = 0,
@@ -49,8 +51,6 @@ Printer::Printer() {
             .print_file_bytes = 0,
             .print_file_bytes_sent = 0
     };
-
-    uart = new SerialPort(250000, GPIO_NUM_12, GPIO_NUM_13, parse_report_callback);
 }
 
 /**
@@ -103,13 +103,13 @@ bool Printer::parse_report(const char *report) {
     if ((state.last_report[0] == 'o') && (state.last_report[1] == 'k')) {
         uart->lock(false);
 #ifdef DEBUG
-//        ESP_LOGI(TAG, "Confirmed #%lu", uart->get_command_id_confirmed());
+        ESP_LOGI(TAG, "Confirmed #%lu", uart->get_command_id_confirmed());
 #endif
         if ((state.last_report[2] != 0) && (state.last_report[2] != '\n')) {
             // Temperature report may be after 'ok', so we need to get it here
             if (strncmp(&state.last_report[3], "T:", 2) == 0) parse_temperature_report(&state.last_report[3]);
         }
-        if (state.status == PRINTER_UNKNOWN) state.status = PRINTER_IDLE;
+        if (state.status == PRINTER_DISCONNECTED) state.status = PRINTER_IDLE;
         return true;
     }
 
@@ -117,18 +117,11 @@ bool Printer::parse_report(const char *report) {
         if (state.status != PRINTER_PRINTING) state.status = PRINTER_WORKING;
         uart->lock(true);
     }
-    else if (strncmp(state.last_report, "T:", 2) == 0) {
-        parse_temperature_report(report);
-    }
-    else if (strncmp(&state.last_report[1], "T:", 2) == 0) {
-        parse_temperature_report(&state.last_report[1]);
-    }
-    else if (strncmp(state.last_report, "X:", 2) == 0) {
-//        ESP_LOGI(TAG, "Got position report %s", report);
-    }
-    else if (strncmp(state.last_report, "measured", 8) == 0) {
-//        ESP_LOGI(TAG, "Got probe report %s", report);
-    }
+    else if (strncmp(state.last_report, "T:", 2) == 0) parse_temperature_report(report);
+    else if (strncmp(&state.last_report[1], "T:", 2) == 0) parse_temperature_report(&state.last_report[1]);
+    else if (strncmp(state.last_report, "X:", 2) == 0) ESP_LOGI(TAG, "Got position report %s", report);
+    else if (strncmp(state.last_report, "measured", 8) == 0) ESP_LOGI(TAG, "Got probe report %s", report);
+
     return false;
 }
 
@@ -165,18 +158,17 @@ bool Printer::parse_report(const char *report) {
 void Printer::task_print(void *arg) {
     auto p = (Printer *) arg;
     while (true) {
-        if (p->state.printing_stop) {
-            p->state.printing_stop = false;
-            p->state.print_file = nullptr;
-            break;
-        }
         auto f = p->get_opened_file();
         if (f != nullptr) {
             char line[80];
             ESP_LOGI(TAG, "Starting print...");
             p->state.status = PRINTER_PRINTING;
             while (fgets(line, 80, f) != nullptr) {
-
+                if (p->state.printing_stop) {
+                    p->state.printing_stop = false;
+                    p->state.print_file = nullptr;
+                    break;
+                }
 #ifdef DEBUG
                 ESP_LOGI(TAG, "Got line: %s", line);
 #endif
@@ -198,6 +190,7 @@ void Printer::task_print(void *arg) {
 }
 
 esp_err_t Printer::init() {
+    uart = new SerialPort((int) settings.get_baud_rate(), GPIO_NUM_12, GPIO_NUM_13, parse_report_callback);
     esp_err_t res = uart->init();
     if (res != ESP_OK) return res;
 

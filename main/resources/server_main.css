@@ -1,8 +1,9 @@
 * { font-family: sans-serif; font-size: 12pt; }
-body { padding: 0; margin: 0; height: 100% !important; width: 100% !important; }
+html{ height: 100% !important; width: 100% !important; }
+body { padding: 0; margin: 0; height: 100% !important; width: 100% !important; display: flex; flex-direction: column;}
 div.h { height: 64pt; margin: 8pt; font-size: 16pt; }
 div.c { display: flex; margin: 4pt; }
-div.fl { color: black; border: 1px solid #ccc; border-radius: 5pt;}
+div.fl { color: black; border: 1px solid #ccc; border-radius: 5pt; flex-grow: 1; box-shadow: rgba(128,128,128,0.5) 0px 0px 6px; }
 div.fl h1 { margin-left: 4pt; }
 div.flh { font-weight: bolder; margin: 4pt; }
 div.st { border: 1px solid #ccc; border-radius: 5pt; }
