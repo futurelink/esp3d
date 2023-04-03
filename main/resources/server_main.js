@@ -19,6 +19,7 @@ $(window).on("load", function () {
     $("#upload_btn").on("click", function() { $("#upload_field").click(); });
     $("#print_btn").on("click", print);
     $("#delete_btn").on("click", deleteFile);
+    $("#cmd_form").on("keypress", function(e) { if (e.keyCode === 13) { e.preventDefault(); $("#send_cmd_btn").click(); }});
 
     updateFilesList();
     initStatusWS();

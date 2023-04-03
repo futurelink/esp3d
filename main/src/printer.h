@@ -29,14 +29,18 @@
 /**
  * Callbacks definitions
  */
-bool parse_report_callback(const char *report);
+void sent_callback();
+bool receive_callback(const char *report);
+bool is_timeout_callback();
+void on_timeout_callback();
 
 /**
  * Printer class definition
  */
-enum PrinterStatus { PRINTER_DISCONNECTED, PRINTER_IDLE, PRINTER_WORKING, PRINTER_PRINTING };
+enum PrinterStatus { PRINTER_DISCONNECTED, PRINTER_IDLE, PRINTER_BUSY, PRINTER_PRINTING };
 
 typedef struct {
+    bool connected;
     enum PrinterStatus status;  // Current printer status
     bool status_requested;
     bool status_updated;
@@ -50,13 +54,20 @@ typedef struct {
     unsigned long int print_file_bytes;
     unsigned long int print_file_bytes_sent;
 
-    char last_report[128];
+    char last_report[256];
 } printer_state_t;
 
 class Printer {
 private:
     SerialPort      *uart;
     printer_state_t state;
+
+    char stop_script[4][32] = { "M104 S0\n", "M140 S0\n", "G28\n", "M84\n" };
+
+    // Variables to identify a timeout happened
+    unsigned int    last_sent_command_time;
+
+    void send_stop_script();
 
 public:
     Printer();
@@ -68,6 +79,9 @@ public:
     void set_status(PrinterStatus st);
     [[nodiscard]] FILE *get_opened_file() const;
 
+    bool is_timeout();
+    void on_timeout();
+    void command_sent();
     bool parse_report(const char *report);
     void parse_temperature_report(const char *report);
 

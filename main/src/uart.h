@@ -43,28 +43,35 @@ private:
     volatile unsigned int command_id_cnt;
     volatile unsigned int command_id_sent;
 
-    char command_buffer[COMMAND_BUFFER_SIZE][COMMAND_MAX_LENGTH];
+    char command_buffer[COMMAND_BUFFER_SIZE][COMMAND_MAX_LENGTH]{};
     uint8_t command_buffer_head;
     volatile uint8_t command_buffer_tail;
     bool locked;
 
     TaskHandle_t task_rx_tx;
 
+    void (*printer_command_sent_callback)();
     bool (*printer_response_parse_callback)(const char *resp);
+    bool (*printer_response_timeout_callback)();
+    void (*printer_on_timeout_callback)();
 
     char *rx_buffer;
-    char str[UART_TMP_BUF_SIZE];
+    char str[UART_TMP_BUF_SIZE]{};
     uint16_t str_pos;
 
     bool receive();
     bool transmit();
 
 public:
-    explicit        SerialPort(int baud, gpio_num_t rxd_pin, gpio_num_t txd_pin, bool (*callback)(const char *));
+    explicit        SerialPort(int baud, gpio_num_t rxd_pin, gpio_num_t txd_pin);
                     ~SerialPort();
 
     esp_err_t       init();
     unsigned long   send(const char *command);
+
+    void set_sent_callback(void (*callback)());
+    void set_response_callback(bool (*callback)(const char *));
+    void set_timeout_callback(bool (*resp_timeout_callback)(), void (*on_timeout_callback)());
 
     [[noreturn]] static void rx_tx_task(void *args);
 

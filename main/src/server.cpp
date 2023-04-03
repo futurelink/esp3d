@@ -50,7 +50,7 @@ extern Camera camera;
 
 const char *Server::printer_state_str() {
     switch (printer.get_status()) {
-        case PRINTER_WORKING: return "Working";
+        case PRINTER_BUSY: return "Working";
         case PRINTER_PRINTING: return "Printing";
         case PRINTER_IDLE: return "Idle";
         default: return "Unknown";
@@ -314,12 +314,13 @@ esp_err_t Server::get_resource_handler(httpd_req_t *req) {
 }
 
 esp_err_t Server::send_status_ws() const {
-    char str[128];
+    char str[200];
     sprintf(str, R"({"status":"%s","hot_end":"%.2f","hot_end_target":"%.2f","bed":"%.2f","bed_target":"%.2f","progress":%.2f})",
             printer_state_str(),
             printer.get_temp_hot_end(), printer.get_temp_hot_end_target(),
             printer.get_temp_bed(), printer.get_temp_bed_target(),
             printer.get_progress());
+    ESP_LOGI(TAG, "Send status to WS: %s", str);
     send_ws(str);
 
     return ESP_OK;

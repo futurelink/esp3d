@@ -28,7 +28,7 @@ static const char TAG[] = "esp3d-print-uart";
 
 extern Server server;
 
-SerialPort::SerialPort(int baud, gpio_num_t rxd_pin, gpio_num_t txd_pin, bool (*callback)(const char *)) {
+SerialPort::SerialPort(int baud, gpio_num_t rxd_pin, gpio_num_t txd_pin) {
     this->baud = baud;
     this->rxd_pin = rxd_pin;
     this->txd_pin = txd_pin;
@@ -37,13 +37,22 @@ SerialPort::SerialPort(int baud, gpio_num_t rxd_pin, gpio_num_t txd_pin, bool (*
     this->task_rx_tx = nullptr;
     this->rx_buffer = (char *) malloc(UART_TMP_BUF_SIZE);
 
+    this->printer_response_timeout_callback = nullptr;
+    this->printer_response_parse_callback = nullptr;
+    this->printer_command_sent_callback = nullptr;
+
     // Create command buffer
     command_id_cnt = 0;
     command_id_sent = 0;
     command_buffer_head = 0;
     command_buffer_tail = 0;
+}
 
-    printer_response_parse_callback = (bool (*)(const char *)) callback;
+void SerialPort::set_sent_callback(void (*callback)()) { printer_command_sent_callback = callback; }
+void SerialPort::set_response_callback(bool (*callback)(const char *)) { printer_response_parse_callback = callback; }
+void SerialPort::set_timeout_callback(bool (*resp_timeout_callback)(), void (*on_timeout_callback)()) {
+    printer_response_timeout_callback = resp_timeout_callback;
+    printer_on_timeout_callback = on_timeout_callback;
 }
 
 /**
@@ -133,28 +142,30 @@ bool SerialPort::receive() {
 #endif
         uint16_t cnt = 0;
 
+#ifdef DEBUG
+        char str_t[128];
+        int l = (len > 127) ? 127 : len;
+        memcpy(str_t, rx_buffer, l); str_t[l] = 0;
+        esp_log_write(ESP_LOG_INFO, TAG, "<%d:%s>\n", len, str_t);
         // Workaround(!!!)
         // There's a bug in IDF that corrupts an answer from printer,
         // so we can't get confirmation. I decided that any string starting with 'ok'
         // is enough to be certain that printer confirmed our previous command.
-        char str_t[64];
-        int l = (len > 63) ? 63 : len;
-        memcpy(str_t, rx_buffer, l); str_t[l] = 0;
-//#ifdef DEBUG
-        esp_log_write(ESP_LOG_INFO, TAG, "<%d:%s>\n", len, str_t);
-//#endif
-        if ((len >= 2) && (rx_buffer[0] == 'o') && (rx_buffer[1] == 'k')) {
+        /*if ((len >= 2) && (rx_buffer[0] == 'o') && (rx_buffer[1] == 'k')) {
             printer_response_parse_callback(str_t);
             ok_received = true;
             cnt = 2;
-        }
+        }*/
+#endif
 
         // Parse the rest of the string
         do {
             if (rx_buffer[cnt] == '\n') {
                 str[str_pos] = 0;
                 if (str_pos > 0) {
-                    ok_received = printer_response_parse_callback(str) || ok_received;
+                    if (printer_response_parse_callback != nullptr)
+                        ok_received = printer_response_parse_callback(str) || ok_received;
+                    else ESP_LOGE(TAG, "Response process callback was not set!");
                     str_pos = 0;
                 }
             } else {
@@ -165,6 +176,22 @@ bool SerialPort::receive() {
 #ifdef DEBUG
         ESP_LOGI(TAG, "uart_receive done");
 #endif
+    } else {
+        if (printer_response_timeout_callback != nullptr) {
+            bool timeout_triggered = printer_response_timeout_callback();
+            if (timeout_triggered) {
+                if (printer_on_timeout_callback != nullptr) printer_on_timeout_callback();
+                ESP_LOGI(TAG, "Response timeout triggered, re-sending last command");
+
+                // Rewind to previous command
+                if (command_id_sent > 0) {
+                    auto id = command_id_sent; command_id_sent = id - 1; // Increment sent command ID
+                }
+                uint8_t tail = (command_buffer_tail == 0) ? COMMAND_BUFFER_SIZE : command_buffer_tail - 1;
+                command_buffer_tail = tail;
+                return true;
+            }
+        }
     }
 
     return ok_received;
@@ -187,6 +214,7 @@ bool SerialPort::transmit() {
     if (++tail == COMMAND_BUFFER_SIZE) tail = 0;        // Increment transmit pointer
     command_buffer_tail = tail;
     auto id = command_id_sent; command_id_sent = id + 1; // Increment sent command ID
+    if (printer_command_sent_callback != nullptr) printer_command_sent_callback();
 
 #ifdef DEBUG
     ESP_LOGI(TAG, "uart_transmit_from_buffer done");
